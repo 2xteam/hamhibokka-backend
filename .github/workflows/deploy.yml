@@ -2,60 +2,68 @@ name: Deploy to EC2
 
 on:
   push:
-    branches: [ main ]  # main 브랜치에 푸시할 때 실행
-  pull_request:
     branches: [ main ]
 
 jobs:
-  deploy:
+  test:
     runs-on: ubuntu-latest
-    
     steps:
-    # 1. 코드 체크아웃
-    - name: Checkout code
-      uses: actions/checkout@v3
-
-    # 2. Node.js 설정
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
+    - uses: actions/checkout@v3
+    - uses: actions/setup-node@v3
       with:
         node-version: '18'
-        cache: 'npm'
+    - run: npm ci
+    - run: npm test --if-present
+    - run: npm run build
 
-    # 3. 의존성 설치 및 빌드 테스트
-    - name: Install dependencies
-      run: npm ci
-
-    - name: Run tests (optional)
-      run: npm test --if-present
-
-    - name: Build application
-      run: npm run build
-
-    # 4. EC2에 배포
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
     - name: Deploy to EC2
       uses: appleboy/ssh-action@v0.1.7
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_PRIVATE_KEY }}
-        port: 22
         script: |
-          # 서버에서 실행할 명령어들
           cd /home/ubuntu/hamhibokka-backend
           
-          # Git에서 최신 코드 받기
-          git pull origin main
+          # 현재 버전 백업
+          git rev-parse HEAD > .current_commit
           
-          # 의존성 설치
-          npm install
+          # 새 코드 가져오기
+          git fetch origin main
+          git reset --hard origin/main
+          
+          # 의존성 설치 (변경된 경우만)
+          npm ci --only=production
           
           # 빌드
           npm run build
           
-          # PM2로 애플리케이션 재시작
-          pm2 restart hamhibokka-backend || pm2 start ecosystem.config.js
+          # 헬스체크용 임시 서버 시작
+          pm2 start ecosystem.config.js --name temp-hamhibokka-backend || true
           
           # 헬스체크
-          sleep 10
-          curl -f http://localhost:3000/graphql -H "Content-Type: application/json" -d '{"query":"query { __typename }"}' || exit 1
+          sleep 15
+          HEALTH_CHECK=$(curl -s -o /dev/null -w "%{http_code}" -H "Content-Type: application/json" -d '{"query":"query { __typename }"}' http://localhost:3000/graphql)
+          
+          if [ "$HEALTH_CHECK" = "200" ]; then
+            echo "Health check passed"
+            # 기존 서버 종료하고 새 서버로 교체
+            pm2 delete hamhibokka-backend || true
+            pm2 start ecosystem.config.js
+            pm2 delete temp-hamhibokka-backend || true
+            pm2 save
+          else
+            echo "Health check failed, rolling back"
+            pm2 delete temp-hamhibokka-backend || true
+            # 이전 커밋으로 롤백
+            git reset --hard $(cat .current_commit)
+            npm run build
+            pm2 restart hamhibokka-backend
+            exit 1
+          fi
