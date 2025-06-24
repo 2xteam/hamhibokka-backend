@@ -17,6 +17,7 @@ import { AuthModule } from './auth/auth.module';
       playground: true, // 프로덕션에서도 playground 활성화
       introspection: true, // 스키마 조회 허용
       context: ({ req }) => ({ req }),
+      csrfPrevention: false,
     }),
     AuthModule,
   ],
