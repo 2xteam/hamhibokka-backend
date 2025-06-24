@@ -15,13 +15,52 @@ type AuthPayload {
   user: User!
 }
 
+type Goal {
+  id: ID!
+  title: String!
+  description: String
+}
+
+type Follow {
+  id: ID!
+  followerId: String!
+  followingId: String!
+}
+
+type Sticker {
+  id: ID!
+  goalId: String!
+  recipientId: String!
+  stickerImageId: String!
+}
+
 type Query {
   hello: String!
+  getUser(id: String!): String!
+  getUsers: [String!]!
+  getGoal(id: String!): Goal!
+  getGoals: [Goal!]!
+  getFollow(id: String!): Follow!
+  getFollows: [Follow!]!
+  getSticker(id: String!): Sticker!
+  getStickers: [Sticker!]!
 }
 
 type Mutation {
   register(registerInput: RegisterInput!): AuthPayload!
   login(loginInput: LoginInput!): AuthPayload!
+  createUser: String!
+  updateUser(id: String!): String!
+  deleteUser(id: String!): String!
+  createGoal(input: GoalInput!): Goal!
+  updateGoal(id: String!, input: GoalInput!): Goal!
+  deleteGoal(id: String!): Boolean!
+  createFollow(input: FollowInput!): Follow!
+  updateFollow(id: String!, input: FollowInput!): Follow!
+  deleteFollow(id: String!): Boolean!
+  createSticker(input: StickerInput!): Sticker!
+  updateSticker(id: String!, input: StickerInput!): Sticker!
+  deleteSticker(id: String!): Boolean!
 }
 
 input RegisterInput {
@@ -33,4 +72,20 @@ input RegisterInput {
 input LoginInput {
   email: String!
   password: String!
+}
+
+input GoalInput {
+  title: String!
+  description: String
+}
+
+input FollowInput {
+  followerId: String!
+  followingId: String!
+}
+
+input StickerInput {
+  goalId: String!
+  recipientId: String!
+  stickerImageId: String!
 }

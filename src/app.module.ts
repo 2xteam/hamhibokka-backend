@@ -6,6 +6,10 @@ import { join } from 'path';
 import { ConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
+import { GoalsModule } from './goals/goals.module';
+import { FollowsModule } from './follows/follows.module';
+import { StickersModule } from './stickers/stickers.module';
 
 @Module({
   imports: [
@@ -20,6 +24,10 @@ import { AuthModule } from './auth/auth.module';
       csrfPrevention: false,
     }),
     AuthModule,
+    UsersModule,
+    GoalsModule,
+    FollowsModule,
+    StickersModule,
   ],
   providers: [
     AppResolver,
