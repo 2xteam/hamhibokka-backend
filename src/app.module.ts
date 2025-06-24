@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AppResolver } from './app.resolver';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { join } from 'path';
@@ -16,6 +17,9 @@ import { AuthModule } from './auth/auth.module';
       context: ({ req }) => ({ req }),
     }),
     AuthModule,
+  ],
+  providers: [
+    AppResolver,
   ],
 })
 export class AppModule {}
