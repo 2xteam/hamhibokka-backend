@@ -32,27 +32,31 @@ jobs:
         key: ${{ secrets.EC2_PRIVATE_KEY }}
         script: |
           cd /home/ubuntu/hamhibokka-backend
-          
+
           # 현재 버전 백업
           git rev-parse HEAD > .current_commit
-          
+
           # 새 코드 가져오기
           git fetch origin main
           git reset --hard origin/main
-          
-          # 의존성 설치 (변경된 경우만)
-          npm ci --only=production
-          
-          # 빌드
+
+          # 모든 의존성 설치 (devDependencies 포함)
+          npm ci
+
+          # 빌드 (이제 nest CLI가 있음)
           npm run build
-          
+
+          # production 의존성만 다시 설치 (빌드 후)
+          rm -rf node_modules
+          npm ci --only=production
+
           # 헬스체크용 임시 서버 시작
           pm2 start ecosystem.config.js --name temp-hamhibokka-backend || true
-          
+
           # 헬스체크
           sleep 15
           HEALTH_CHECK=$(curl -s -o /dev/null -w "%{http_code}" -H "Content-Type: application/json" -d '{"query":"query { __typename }"}' http://localhost:3000/graphql)
-          
+
           if [ "$HEALTH_CHECK" = "200" ]; then
             echo "Health check passed"
             # 기존 서버 종료하고 새 서버로 교체
@@ -65,7 +69,10 @@ jobs:
             pm2 delete temp-hamhibokka-backend || true
             # 이전 커밋으로 롤백
             git reset --hard $(cat .current_commit)
+            npm ci
             npm run build
+            rm -rf node_modules
+            npm ci --only=production
             pm2 restart hamhibokka-backend
             exit 1
           fi
