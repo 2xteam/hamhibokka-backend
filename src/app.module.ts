@@ -10,6 +10,8 @@ import { UsersModule } from './users/users.module';
 import { GoalsModule } from './goals/goals.module';
 import { FollowsModule } from './follows/follows.module';
 import { StickersModule } from './stickers/stickers.module';
+import { UploadModule } from './upload/upload.module';
+import { StickerImagesModule } from './sticker-images/sticker-images.module';
 
 @Module({
   imports: [
@@ -28,6 +30,8 @@ import { StickersModule } from './stickers/stickers.module';
     GoalsModule,
     FollowsModule,
     StickersModule,
+    UploadModule,
+    StickerImagesModule,
   ],
   providers: [
     AppResolver,

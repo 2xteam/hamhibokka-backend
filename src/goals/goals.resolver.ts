@@ -7,28 +7,28 @@ import { GoalInput } from './dto/goal.input';
 export class GoalsResolver {
   constructor(private readonly goalsService: GoalsService) {}
 
-  @Query(() => Goal, { name: 'getGoal' })
-  getGoal(@Args('id') id: string) {
-    return this.goalsService.findOne(id);
-  }
-
   @Query(() => [Goal], { name: 'getGoals' })
-  getGoals() {
+  async getGoals() {
     return this.goalsService.findAll();
   }
 
+  @Query(() => Goal, { name: 'getGoal', nullable: true })
+  async getGoal(@Args('id') id: string) {
+    return this.goalsService.findOne(id);
+  }
+
   @Mutation(() => Goal, { name: 'createGoal' })
-  createGoal(@Args('input') input: GoalInput) {
+  async createGoal(@Args('input') input: GoalInput) {
     return this.goalsService.create(input);
   }
 
   @Mutation(() => Goal, { name: 'updateGoal' })
-  updateGoal(@Args('id') id: string, @Args('input') input: GoalInput) {
+  async updateGoal(@Args('id') id: string, @Args('input') input: GoalInput) {
     return this.goalsService.update(id, input);
   }
 
   @Mutation(() => Boolean, { name: 'deleteGoal' })
-  deleteGoal(@Args('id') id: string) {
+  async deleteGoal(@Args('id') id: string) {
     return this.goalsService.remove(id);
   }
 } 

@@ -1,45 +1,69 @@
 import { Injectable } from '@nestjs/common';
-import { FollowInput } from './dto/follow.input';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { Follow } from './entities/follow.entity';
-import { v4 as uuidv4 } from 'uuid';
+import { Follow as FollowSchema, FollowDocument } from '../schemas/follow.schema';
+import { FollowInput } from './dto/follow.input';
 
 @Injectable()
 export class FollowsService {
-  private follows: Follow[] = [];
+  constructor(
+    @InjectModel(FollowSchema.name)
+    private readonly followModel: Model<FollowDocument>,
+  ) {}
 
-  create(input: FollowInput): Follow {
-    const follow: Follow = {
-      id: uuidv4(),
+  async create(input: FollowInput): Promise<Follow> {
+    const follow = new this.followModel({
       followerId: input.followerId,
       followingId: input.followingId,
+      // status 등 필요한 필드 추가
+    });
+    const saved = await follow.save();
+    return {
+      id: saved._id ? String(saved._id) : '',
+      followerId: saved.followerId,
+      followingId: saved.followingId,
     };
-    this.follows.push(follow);
-    return follow;
   }
 
-  findAll(): Follow[] {
-    return this.follows;
+  async findAll(): Promise<Follow[]> {
+    const follows = await this.followModel.find();
+    return follows.map(f => ({
+      id: f._id ? String(f._id) : '',
+      followerId: f.followerId,
+      followingId: f.followingId,
+    }));
   }
 
-  findOne(id: string): Follow | undefined {
-    return this.follows.find(f => f.id === id);
+  async findOne(id: string): Promise<Follow | undefined> {
+    const f = await this.followModel.findById(id);
+    if (!f) return undefined;
+    return {
+      id: f._id ? String(f._id) : '',
+      followerId: f.followerId,
+      followingId: f.followingId,
+    };
   }
 
-  update(id: string, input: FollowInput): Follow | undefined {
-    const follow = this.findOne(id);
-    if (follow) {
-      follow.followerId = input.followerId;
-      follow.followingId = input.followingId;
-    }
-    return follow;
+  async update(id: string, input: FollowInput): Promise<Follow | undefined> {
+    const f = await this.followModel.findByIdAndUpdate(
+      id,
+      {
+        followerId: input.followerId,
+        followingId: input.followingId,
+      },
+      { new: true },
+    );
+    if (!f) return undefined;
+    return {
+      id: f._id ? String(f._id) : '',
+      followerId: f.followerId,
+      followingId: f.followingId,
+    };
   }
 
-  remove(id: string): boolean {
-    const idx = this.follows.findIndex(f => f.id === id);
-    if (idx >= 0) {
-      this.follows.splice(idx, 1);
-      return true;
-    }
-    return false;
+  async remove(id: string): Promise<boolean> {
+    const res = await this.followModel.deleteOne({ _id: id });
+    return res.deletedCount > 0;
   }
 } 
