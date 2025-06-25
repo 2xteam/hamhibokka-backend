@@ -127,4 +127,4 @@ curl -X POST http://localhost:3000/upload/sticker-image \
 - 자세한 GraphQL 타입/쿼리/뮤테이션은 `/src/schema.gql` 참고
 
 ---
-문의/이슈는 GitHub Issue로 남겨주세요.
+
