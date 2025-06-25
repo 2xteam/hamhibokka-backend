@@ -1,47 +1,75 @@
 import { Injectable } from '@nestjs/common';
-import { StickerInput } from './dto/sticker.input';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { Sticker } from './entities/sticker.entity';
-import { v4 as uuidv4 } from 'uuid';
+import { Sticker as StickerSchema, StickerDocument } from '../schemas/sticker.schema';
+import { StickerInput } from './dto/sticker.input';
 
 @Injectable()
 export class StickersService {
-  private stickers: Sticker[] = [];
+  constructor(
+    @InjectModel(StickerSchema.name)
+    private readonly stickerModel: Model<StickerDocument>,
+  ) {}
 
-  create(input: StickerInput): Sticker {
-    const sticker: Sticker = {
-      id: uuidv4(),
+  async create(input: StickerInput): Promise<Sticker> {
+    const sticker = new this.stickerModel({
       goalId: input.goalId,
       recipientId: input.recipientId,
       stickerImageId: input.stickerImageId,
+      // stickerId, grantedBy 등 필요한 필드 추가
+    });
+    const saved = await sticker.save();
+    return {
+      id: saved._id ? String(saved._id) : '',
+      goalId: saved.goalId,
+      recipientId: saved.recipientId,
+      stickerImageId: saved.stickerImageId,
     };
-    this.stickers.push(sticker);
-    return sticker;
   }
 
-  findAll(): Sticker[] {
-    return this.stickers;
+  async findAll(): Promise<Sticker[]> {
+    const stickers = await this.stickerModel.find();
+    return stickers.map(s => ({
+      id: s._id ? s._id.toString() : '',
+      goalId: s.goalId,
+      recipientId: s.recipientId,
+      stickerImageId: s.stickerImageId,
+    }));
   }
 
-  findOne(id: string): Sticker | undefined {
-    return this.stickers.find(s => s.id === id);
+  async findOne(id: string): Promise<Sticker | undefined> {
+    const s = await this.stickerModel.findById(id);
+    if (!s) return undefined;
+    return {
+      id: s._id ? s._id.toString() : '',
+      goalId: s.goalId,
+      recipientId: s.recipientId,
+      stickerImageId: s.stickerImageId,
+    };
   }
 
-  update(id: string, input: StickerInput): Sticker | undefined {
-    const sticker = this.findOne(id);
-    if (sticker) {
-      sticker.goalId = input.goalId;
-      sticker.recipientId = input.recipientId;
-      sticker.stickerImageId = input.stickerImageId;
-    }
-    return sticker;
+  async update(id: string, input: StickerInput): Promise<Sticker | undefined> {
+    const s = await this.stickerModel.findByIdAndUpdate(
+      id,
+      {
+        goalId: input.goalId,
+        recipientId: input.recipientId,
+        stickerImageId: input.stickerImageId,
+      },
+      { new: true },
+    );
+    if (!s) return undefined;
+    return {
+      id: s._id ? s._id.toString() : '',
+      goalId: s.goalId,
+      recipientId: s.recipientId,
+      stickerImageId: s.stickerImageId,
+    };
   }
 
-  remove(id: string): boolean {
-    const idx = this.stickers.findIndex(s => s.id === id);
-    if (idx >= 0) {
-      this.stickers.splice(idx, 1);
-      return true;
-    }
-    return false;
+  async remove(id: string): Promise<boolean> {
+    const res = await this.stickerModel.deleteOne({ _id: id });
+    return res.deletedCount > 0;
   }
 } 

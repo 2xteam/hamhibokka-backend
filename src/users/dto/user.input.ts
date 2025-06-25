@@ -10,4 +10,10 @@ export class UserInput {
 
   @Field({ nullable: true })
   profileImage?: string;
+
+  @Field()
+  userId: string;
+
+  @Field()
+  password: string;
 } 

@@ -6,6 +6,9 @@ export class User {
   id: string;
 
   @Field()
+  userId: string;
+
+  @Field()
   email: string;
 
   @Field()
@@ -13,4 +16,7 @@ export class User {
 
   @Field({ nullable: true })
   profileImage?: string;
+
+  // GraphQL에는 노출하지 않음
+  password: string;
 } 

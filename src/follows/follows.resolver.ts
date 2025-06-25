@@ -7,28 +7,28 @@ import { FollowInput } from './dto/follow.input';
 export class FollowsResolver {
   constructor(private readonly followsService: FollowsService) {}
 
-  @Query(() => Follow, { name: 'getFollow' })
-  getFollow(@Args('id') id: string) {
-    return this.followsService.findOne(id);
-  }
-
   @Query(() => [Follow], { name: 'getFollows' })
-  getFollows() {
+  async getFollows() {
     return this.followsService.findAll();
   }
 
+  @Query(() => Follow, { name: 'getFollow', nullable: true })
+  async getFollow(@Args('id') id: string) {
+    return this.followsService.findOne(id);
+  }
+
   @Mutation(() => Follow, { name: 'createFollow' })
-  createFollow(@Args('input') input: FollowInput) {
+  async createFollow(@Args('input') input: FollowInput) {
     return this.followsService.create(input);
   }
 
   @Mutation(() => Follow, { name: 'updateFollow' })
-  updateFollow(@Args('id') id: string, @Args('input') input: FollowInput) {
+  async updateFollow(@Args('id') id: string, @Args('input') input: FollowInput) {
     return this.followsService.update(id, input);
   }
 
   @Mutation(() => Boolean, { name: 'deleteFollow' })
-  deleteFollow(@Args('id') id: string) {
+  async deleteFollow(@Args('id') id: string) {
     return this.followsService.remove(id);
   }
 } 

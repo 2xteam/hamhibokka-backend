@@ -25,6 +25,12 @@ export class StickerImage {
 
   @Prop()
   uploadedBy?: string;
+
+  @Prop()
+  createdAt: Date;
+
+  @Prop()
+  updatedAt: Date;
 }
 
 export const StickerImageSchema = SchemaFactory.createForClass(StickerImage);
