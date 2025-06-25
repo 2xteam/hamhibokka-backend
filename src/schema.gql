@@ -1,0 +1,119 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type User {
+  id: ID!
+  userId: String!
+  email: String!
+  nickname: String!
+  profileImage: String
+}
+
+type AuthPayload {
+  accessToken: String!
+  user: User!
+}
+
+type Goal {
+  id: ID!
+  title: String!
+  description: String
+}
+
+type Follow {
+  id: ID!
+  followerId: String!
+  followingId: String!
+}
+
+type Sticker {
+  id: ID!
+  goalId: String!
+  recipientId: String!
+  stickerImageId: String!
+}
+
+type StickerImage {
+  id: ID!
+  stickerImageId: String!
+  name: String!
+  imageUrl: String!
+  thumbnailUrl: String!
+  isDefault: Boolean!
+  category: String
+  uploadedBy: String
+  createdAt: DateTime!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type Query {
+  hello: String!
+  getUser(id: String!): User
+  getUsers: [User!]!
+  getGoals: [Goal!]!
+  getGoal(id: String!): Goal
+  getFollows: [Follow!]!
+  getFollow(id: String!): Follow
+  getStickers: [Sticker!]!
+  getSticker(id: String!): Sticker
+  myStickerImages: [StickerImage!]!
+  defaultStickerImages: [StickerImage!]!
+}
+
+type Mutation {
+  register(registerInput: RegisterInput!): AuthPayload!
+  login(loginInput: LoginInput!): AuthPayload!
+  createUser(input: UserInput!): User!
+  updateUser(id: String!, input: UserInput!): User!
+  deleteUser(id: String!): Boolean!
+  createGoal(input: GoalInput!): Goal!
+  updateGoal(id: String!, input: GoalInput!): Goal!
+  deleteGoal(id: String!): Boolean!
+  createFollow(input: FollowInput!): Follow!
+  updateFollow(id: String!, input: FollowInput!): Follow!
+  deleteFollow(id: String!): Boolean!
+  createSticker(input: StickerInput!): Sticker!
+  updateSticker(id: String!, input: StickerInput!): Sticker!
+  deleteSticker(id: String!): Boolean!
+  deleteStickerImage(stickerImageId: String!): Boolean!
+}
+
+input RegisterInput {
+  email: String!
+  password: String!
+  nickname: String!
+}
+
+input LoginInput {
+  email: String!
+  password: String!
+}
+
+input UserInput {
+  email: String!
+  nickname: String!
+  profileImage: String
+  userId: String!
+  password: String!
+}
+
+input GoalInput {
+  title: String!
+  description: String
+}
+
+input FollowInput {
+  followerId: String!
+  followingId: String!
+}
+
+input StickerInput {
+  goalId: String!
+  recipientId: String!
+  stickerImageId: String!
+}
