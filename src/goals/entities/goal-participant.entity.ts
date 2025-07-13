@@ -1,6 +1,15 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType()
+export class StickerReceivedLog {
+  @Field()
+  date: Date; // Date 타입으로 변경
+
+  @Field()
+  count: number;
+}
+
+@ObjectType()
 export class GoalParticipant {
   @Field()
   userId: string;
@@ -16,4 +25,7 @@ export class GoalParticipant {
 
   @Field()
   joinedAt: Date;
+
+  @Field(() => [StickerReceivedLog], { nullable: true })
+  stickerReceivedLogs?: StickerReceivedLog[];
 }

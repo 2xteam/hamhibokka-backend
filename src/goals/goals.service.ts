@@ -59,6 +59,33 @@ export class GoalsService {
     };
     const goal = new this.goalModel(goalData);
     const saved = await goal.save();
+
+    // participants의 nickname 조회
+    const participantsWithNicknames: any[] = [];
+    if (saved.participants) {
+      for (const participant of saved.participants) {
+        let nickname: string | undefined = undefined;
+        try {
+          const user = await this.usersService.findByUserId(participant.userId);
+          nickname = user?.nickname;
+        } catch (error) {
+          console.error(
+            `Error fetching nickname for user ${participant.userId}:`,
+            error,
+          );
+        }
+
+        participantsWithNicknames.push({
+          userId: participant.userId,
+          nickname,
+          status: participant.status,
+          currentStickerCount: participant.currentStickerCount,
+          joinedAt: participant.joinedAt,
+          stickerReceivedLogs: participant.stickerReceivedLogs || [],
+        });
+      }
+    }
+
     return {
       id: saved._id ? String(saved._id) : '',
       goalId: saved.goalId,
@@ -72,13 +99,7 @@ export class GoalsService {
       autoApprove: saved.autoApprove,
       createdAt: saved.createdAt,
       updatedAt: saved.updatedAt,
-      participants:
-        saved.participants?.map((p) => ({
-          userId: p.userId,
-          status: p.status,
-          currentStickerCount: p.currentStickerCount,
-          joinedAt: p.joinedAt,
-        })) || [],
+      participants: participantsWithNicknames,
     };
   }
 
@@ -119,27 +140,52 @@ export class GoalsService {
       goals = filteredGoals;
     }
 
-    return goals.map((g) => ({
-      id: g._id ? String(g._id) : '',
-      goalId: g.goalId,
-      title: g.title,
-      description: g.description,
-      stickerCount: g.stickerCount,
-      mode: g.mode,
-      visibility: g.visibility,
-      status: g.status,
-      createdBy: g.createdBy,
-      autoApprove: g.autoApprove,
-      createdAt: g.createdAt,
-      updatedAt: g.updatedAt,
-      participants:
-        g.participants?.map((p) => ({
-          userId: p.userId,
-          status: p.status,
-          currentStickerCount: p.currentStickerCount,
-          joinedAt: p.joinedAt,
-        })) || [],
-    }));
+    // 각 goal의 participants에 nickname 조회
+    const goalsWithNicknames = await Promise.all(
+      goals.map(async (g) => {
+        const participantsWithNicknames = await Promise.all(
+          (g.participants || []).map(async (p) => {
+            let nickname: string | undefined = undefined;
+            try {
+              const user = await this.usersService.findByUserId(p.userId);
+              nickname = user?.nickname;
+            } catch (error) {
+              console.error(
+                `Error fetching nickname for user ${p.userId}:`,
+                error,
+              );
+            }
+
+            return {
+              userId: p.userId,
+              nickname,
+              status: p.status,
+              currentStickerCount: p.currentStickerCount,
+              joinedAt: p.joinedAt,
+              stickerReceivedLogs: p.stickerReceivedLogs || [],
+            };
+          }),
+        );
+
+        return {
+          id: g._id ? String(g._id) : '',
+          goalId: g.goalId,
+          title: g.title,
+          description: g.description,
+          stickerCount: g.stickerCount,
+          mode: g.mode,
+          visibility: g.visibility,
+          status: g.status,
+          createdBy: g.createdBy,
+          autoApprove: g.autoApprove,
+          createdAt: g.createdAt,
+          updatedAt: g.updatedAt,
+          participants: participantsWithNicknames,
+        };
+      }),
+    );
+
+    return goalsWithNicknames;
   }
 
   async findOne(id: string, userId?: string): Promise<Goal | undefined> {
@@ -178,6 +224,7 @@ export class GoalsService {
           status: participant.status,
           currentStickerCount: participant.currentStickerCount,
           joinedAt: participant.joinedAt,
+          stickerReceivedLogs: participant.stickerReceivedLogs || [],
         });
       }
     }
@@ -251,6 +298,33 @@ export class GoalsService {
       new: true,
     });
     if (!g) return undefined;
+
+    // participants의 nickname 조회
+    const participantsWithNicknames: any[] = [];
+    if (g.participants) {
+      for (const participant of g.participants) {
+        let nickname: string | undefined = undefined;
+        try {
+          const user = await this.usersService.findByUserId(participant.userId);
+          nickname = user?.nickname;
+        } catch (error) {
+          console.error(
+            `Error fetching nickname for user ${participant.userId}:`,
+            error,
+          );
+        }
+
+        participantsWithNicknames.push({
+          userId: participant.userId,
+          nickname,
+          status: participant.status,
+          currentStickerCount: participant.currentStickerCount,
+          joinedAt: participant.joinedAt,
+          stickerReceivedLogs: participant.stickerReceivedLogs || [],
+        });
+      }
+    }
+
     return {
       id: g._id ? g._id.toString() : '',
       goalId: g.goalId,
@@ -264,13 +338,7 @@ export class GoalsService {
       autoApprove: g.autoApprove,
       createdAt: g.createdAt,
       updatedAt: g.updatedAt,
-      participants:
-        g.participants?.map((p) => ({
-          userId: p.userId,
-          status: p.status,
-          currentStickerCount: p.currentStickerCount,
-          joinedAt: p.joinedAt,
-        })) || [],
+      participants: participantsWithNicknames,
     };
   }
 
@@ -284,5 +352,109 @@ export class GoalsService {
     if (!g) return false;
     const res = await this.goalModel.deleteOne({ _id: id });
     return res.deletedCount > 0;
+  }
+
+  async receiveSticker(
+    goalId: string,
+    toUserId: string,
+    userId: string,
+    stickerCount?: number,
+  ): Promise<Goal> {
+    // toUserId를 recipientId로 매핑
+    const recipientId = toUserId;
+    // Goal이 존재하는지 확인
+    const goal = await this.goalModel.findOne({ goalId });
+    if (!goal) {
+      throw new Error('Goal을 찾을 수 없습니다.');
+    }
+
+    // stickerCount 파라미터 처리 (없으면 1)
+    const count = stickerCount && stickerCount > 0 ? stickerCount : 1;
+    const nowDate = new Date();
+
+    // participants 배열에서 해당 사용자의 정보를 업데이트 (매번 새로운 로그 추가)
+    goal.participants = [...(goal.participants || [])].map((p) => {
+      if (p.userId === recipientId) {
+        const logs = Array.isArray(p.stickerReceivedLogs)
+          ? [...p.stickerReceivedLogs]
+          : [];
+        // stickerCount만큼 반복 push하는 대신, count: stickerCount로 한 번만 push
+        logs.push({ date: nowDate, count });
+        return {
+          userId: p.userId,
+          status: p.status || 'active',
+          currentStickerCount: (p.currentStickerCount || 0) + count,
+          joinedAt: p.joinedAt || new Date(),
+          stickerReceivedLogs: logs,
+        };
+      }
+      return {
+        userId: p.userId,
+        status: p.status || 'active',
+        currentStickerCount: p.currentStickerCount || 0,
+        joinedAt: p.joinedAt || new Date(),
+        stickerReceivedLogs: Array.isArray(p.stickerReceivedLogs)
+          ? p.stickerReceivedLogs
+          : [],
+      };
+    });
+
+    goal.markModified('participants');
+    goal.updatedBy = userId;
+    await goal.save();
+
+    // creator의 nickname 조회
+    let creatorNickname: string | undefined = undefined;
+    if (goal.createdBy) {
+      try {
+        const creator = await this.usersService.findByUserId(goal.createdBy);
+        creatorNickname = creator?.nickname;
+      } catch (error) {
+        console.error('Error fetching creator nickname:', error);
+      }
+    }
+
+    // participants의 nickname 조회
+    const participantsWithNicknames: any[] = [];
+    if (goal.participants) {
+      for (const participant of goal.participants) {
+        let nickname: string | undefined = undefined;
+        try {
+          const user = await this.usersService.findByUserId(participant.userId);
+          nickname = user?.nickname;
+        } catch (error) {
+          console.error(
+            `Error fetching nickname for user ${participant.userId}:`,
+            error,
+          );
+        }
+
+        participantsWithNicknames.push({
+          userId: participant.userId,
+          nickname,
+          status: participant.status,
+          currentStickerCount: participant.currentStickerCount,
+          joinedAt: participant.joinedAt,
+          stickerReceivedLogs: participant.stickerReceivedLogs || [],
+        });
+      }
+    }
+
+    return {
+      id: goal._id ? goal._id.toString() : '',
+      goalId: goal.goalId,
+      title: goal.title,
+      description: goal.description,
+      stickerCount: goal.stickerCount,
+      mode: goal.mode,
+      visibility: goal.visibility,
+      status: goal.status,
+      createdBy: goal.createdBy,
+      creatorNickname,
+      autoApprove: goal.autoApprove,
+      createdAt: goal.createdAt,
+      updatedAt: goal.updatedAt,
+      participants: participantsWithNicknames,
+    };
   }
 }

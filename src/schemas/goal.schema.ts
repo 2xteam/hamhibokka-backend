@@ -28,6 +28,15 @@ export enum ParticipationStatus {
 }
 
 @Schema()
+export class StickerReceivedLog {
+  @Prop({ required: true, type: Date })
+  date: Date; // Date 타입으로 변경
+
+  @Prop({ required: true, default: 1 })
+  count: number;
+}
+
+@Schema()
 export class GoalParticipant {
   @Prop({ required: true })
   userId: string;
@@ -40,6 +49,9 @@ export class GoalParticipant {
 
   @Prop({ default: Date.now })
   joinedAt: Date;
+
+  @Prop([StickerReceivedLog])
+  stickerReceivedLogs: StickerReceivedLog[];
 }
 
 @Schema({ timestamps: true })
@@ -73,6 +85,9 @@ export class Goal {
 
   @Prop({ required: true })
   createdBy: string;
+
+  @Prop()
+  updatedBy?: string;
 
   @Prop()
   maxParticipants?: number;
