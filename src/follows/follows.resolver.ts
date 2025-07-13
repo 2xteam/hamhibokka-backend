@@ -1,7 +1,10 @@
-import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
-import { FollowsService } from './follows.service';
-import { Follow } from './entities/follow.entity';
+import { UseGuards } from '@nestjs/common';
+import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FollowInput } from './dto/follow.input';
+import { Follow } from './entities/follow.entity';
+import { FollowsService } from './follows.service';
 
 @Resolver(() => Follow)
 export class FollowsResolver {
@@ -18,17 +21,27 @@ export class FollowsResolver {
   }
 
   @Mutation(() => Follow, { name: 'createFollow' })
-  async createFollow(@Args('input') input: FollowInput) {
-    return this.followsService.create(input);
+  @UseGuards(JwtAuthGuard)
+  async createFollow(
+    @Args('input') input: FollowInput,
+    @CurrentUser() userId: string,
+  ) {
+    return this.followsService.create(input, userId);
   }
 
   @Mutation(() => Follow, { name: 'updateFollow' })
-  async updateFollow(@Args('id') id: string, @Args('input') input: FollowInput) {
-    return this.followsService.update(id, input);
+  @UseGuards(JwtAuthGuard)
+  async updateFollow(
+    @Args('id') id: string,
+    @Args('input') input: FollowInput,
+    @CurrentUser() userId: string,
+  ) {
+    return this.followsService.update(id, input, userId);
   }
 
   @Mutation(() => Boolean, { name: 'deleteFollow' })
-  async deleteFollow(@Args('id') id: string) {
-    return this.followsService.remove(id);
+  @UseGuards(JwtAuthGuard)
+  async deleteFollow(@Args('id') id: string, @CurrentUser() userId: string) {
+    return this.followsService.remove(id, userId);
   }
-} 
+}

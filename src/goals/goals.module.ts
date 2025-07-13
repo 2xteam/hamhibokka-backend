@@ -1,12 +1,18 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { GoalsService } from './goals.service';
-import { GoalsResolver } from './goals.resolver';
+import { FollowsModule } from '../follows/follows.module';
 import { Goal, GoalSchema } from '../schemas/goal.schema';
+import { UsersModule } from '../users/users.module';
+import { GoalsResolver } from './goals.resolver';
+import { GoalsService } from './goals.service';
 
 @Module({
-  imports: [MongooseModule.forFeature([{ name: Goal.name, schema: GoalSchema }])],
+  imports: [
+    MongooseModule.forFeature([{ name: Goal.name, schema: GoalSchema }]),
+    FollowsModule,
+    UsersModule,
+  ],
   providers: [GoalsResolver, GoalsService],
   exports: [GoalsService],
 })
-export class GoalsModule {} 
+export class GoalsModule {}

@@ -26,6 +26,12 @@ export class Sticker {
   @Prop({ required: true })
   stickerImageId: string;
 
+  @Prop({ required: false })
+  createdBy?: string;
+
+  @Prop({ required: false })
+  updatedBy?: string;
+
   @Prop()
   reason?: string;
 
@@ -42,7 +48,7 @@ export class Sticker {
 export const StickerSchema = SchemaFactory.createForClass(Sticker);
 
 // 고유 ID 자동 생성
-StickerSchema.pre('save', function(next) {
+StickerSchema.pre('save', function (next) {
   if (!this.stickerId) {
     this.stickerId = `sticker_${Math.random().toString(36).substr(2, 9)}`;
   }

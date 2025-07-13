@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import * as bcrypt from 'bcryptjs';
 import { Model } from 'mongoose';
+import { UserDocument, User as UserSchema } from '../schemas/user.schema';
 import { UserInput } from './dto/user.input';
 import { User } from './entities/user.entity';
-import { User as UserSchema, UserDocument } from '../schemas/user.schema';
-import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class UsersService {
@@ -35,7 +35,7 @@ export class UsersService {
 
   async findAll(): Promise<User[]> {
     const users = await this.userModel.find();
-    return users.map(u => ({
+    return users.map((u) => ({
       id: u._id ? String(u._id) : '',
       userId: u.userId,
       email: u.email,
@@ -47,6 +47,19 @@ export class UsersService {
 
   async findOne(id: string): Promise<User | undefined> {
     const u = await this.userModel.findById(id);
+    if (!u) return undefined;
+    return {
+      id: u._id ? String(u._id) : '',
+      userId: u.userId,
+      email: u.email,
+      nickname: u.nickname,
+      profileImage: u.profileImage,
+      password: u.password,
+    };
+  }
+
+  async findByUserId(userId: string): Promise<User | undefined> {
+    const u = await this.userModel.findOne({ userId });
     if (!u) return undefined;
     return {
       id: u._id ? String(u._id) : '',
@@ -86,4 +99,4 @@ export class UsersService {
     const res = await this.userModel.deleteOne({ _id: id });
     return res.deletedCount > 0;
   }
-} 
+}

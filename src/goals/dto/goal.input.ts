@@ -1,4 +1,4 @@
-import { InputType, Field } from '@nestjs/graphql';
+import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class GoalInput {
@@ -7,4 +7,19 @@ export class GoalInput {
 
   @Field({ nullable: true })
   description?: string;
-} 
+
+  @Field()
+  stickerCount: number;
+
+  @Field({ nullable: true })
+  mode?: string;
+
+  @Field({ nullable: true })
+  visibility?: string;
+
+  @Field({ nullable: true })
+  status?: string;
+
+  @Field({ nullable: true })
+  autoApprove?: boolean;
+}
