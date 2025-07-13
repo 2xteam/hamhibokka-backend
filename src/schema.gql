@@ -21,18 +21,24 @@ type Follow {
   followingId: String!
 }
 
-type GoalParticipant {
-  userId: String!
-  nickname: String
-  status: String!
-  currentStickerCount: Float!
-  joinedAt: DateTime!
+type StickerReceivedLog {
+  date: DateTime!
+  count: Float!
 }
 
 """
 A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
 """
 scalar DateTime
+
+type GoalParticipant {
+  userId: String!
+  nickname: String
+  status: String!
+  currentStickerCount: Float!
+  joinedAt: DateTime!
+  stickerReceivedLogs: [StickerReceivedLog!]
+}
 
 type Goal {
   id: ID!
@@ -118,6 +124,7 @@ type Mutation {
   createGoal(input: GoalInput!): Goal!
   updateGoal(id: String!, input: GoalInput!): Goal!
   deleteGoal(id: String!): Boolean!
+  receiveSticker(input: ReceiveStickerInput!): Goal!
   createFollow(input: FollowInput!): Follow!
   updateFollow(id: String!, input: FollowInput!): Follow!
   deleteFollow(id: String!): Boolean!
@@ -158,6 +165,13 @@ input GoalInput {
   visibility: String
   status: String
   autoApprove: Boolean
+}
+
+input ReceiveStickerInput {
+  goalId: String!
+  toUserId: String!
+  recipientId: String
+  stickerCount: Float
 }
 
 input FollowInput {
