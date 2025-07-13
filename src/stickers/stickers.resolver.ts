@@ -1,7 +1,10 @@
-import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
-import { StickersService } from './stickers.service';
-import { Sticker } from './entities/sticker.entity';
+import { UseGuards } from '@nestjs/common';
+import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { StickerInput } from './dto/sticker.input';
+import { Sticker } from './entities/sticker.entity';
+import { StickersService } from './stickers.service';
 
 @Resolver(() => Sticker)
 export class StickersResolver {
@@ -18,17 +21,27 @@ export class StickersResolver {
   }
 
   @Mutation(() => Sticker, { name: 'createSticker' })
-  async createSticker(@Args('input') input: StickerInput) {
-    return this.stickersService.create(input);
+  @UseGuards(JwtAuthGuard)
+  async createSticker(
+    @Args('input') input: StickerInput,
+    @CurrentUser() userId: string,
+  ) {
+    return this.stickersService.create(input, userId);
   }
 
   @Mutation(() => Sticker, { name: 'updateSticker' })
-  async updateSticker(@Args('id') id: string, @Args('input') input: StickerInput) {
-    return this.stickersService.update(id, input);
+  @UseGuards(JwtAuthGuard)
+  async updateSticker(
+    @Args('id') id: string,
+    @Args('input') input: StickerInput,
+    @CurrentUser() userId: string,
+  ) {
+    return this.stickersService.update(id, input, userId);
   }
 
   @Mutation(() => Boolean, { name: 'deleteSticker' })
-  async deleteSticker(@Args('id') id: string) {
-    return this.stickersService.remove(id);
+  @UseGuards(JwtAuthGuard)
+  async deleteSticker(@Args('id') id: string, @CurrentUser() userId: string) {
+    return this.stickersService.remove(id, userId);
   }
-} 
+}

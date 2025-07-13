@@ -21,11 +21,6 @@ export enum GoalStatus {
   CANCELLED = 'cancelled',
 }
 
-export enum ParticipationRole {
-  CREATOR = 'creator',
-  PARTICIPANT = 'participant',
-}
-
 export enum ParticipationStatus {
   ACTIVE = 'active',
   COMPLETED = 'completed',
@@ -37,11 +32,11 @@ export class GoalParticipant {
   @Prop({ required: true })
   userId: string;
 
-  @Prop({ enum: ParticipationRole, required: true })
-  role: ParticipationRole;
-
   @Prop({ enum: ParticipationStatus, default: ParticipationStatus.ACTIVE })
   status: ParticipationStatus;
+
+  @Prop({ default: 0 })
+  currentStickerCount: number;
 
   @Prop({ default: Date.now })
   joinedAt: Date;
@@ -59,7 +54,7 @@ export class Goal {
   description?: string;
 
   @Prop({ required: true })
-  totalStickers: number;
+  stickerCount: number;
 
   @Prop()
   startDate?: Date;
@@ -87,12 +82,18 @@ export class Goal {
 
   @Prop([GoalParticipant])
   participants: GoalParticipant[];
+
+  @Prop()
+  createdAt: Date;
+
+  @Prop()
+  updatedAt: Date;
 }
 
 export const GoalSchema = SchemaFactory.createForClass(Goal);
 
 // 고유 ID 자동 생성
-GoalSchema.pre('save', function(next) {
+GoalSchema.pre('save', function (next) {
   if (!this.goalId) {
     this.goalId = `goal_${Math.random().toString(36).substr(2, 9)}`;
   }

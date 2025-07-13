@@ -22,6 +22,12 @@ export class Follow {
 
   @Prop()
   approvedAt?: Date;
+
+  @Prop({ required: false })
+  createdBy?: string;
+
+  @Prop({ required: false })
+  updatedBy?: string;
 }
 
 export const FollowSchema = SchemaFactory.createForClass(Follow);

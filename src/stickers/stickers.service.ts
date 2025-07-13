@@ -1,9 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Sticker } from './entities/sticker.entity';
-import { Sticker as StickerSchema, StickerDocument } from '../schemas/sticker.schema';
+import {
+  StickerDocument,
+  Sticker as StickerSchema,
+} from '../schemas/sticker.schema';
 import { StickerInput } from './dto/sticker.input';
+import { Sticker } from './entities/sticker.entity';
 
 @Injectable()
 export class StickersService {
@@ -12,11 +15,13 @@ export class StickersService {
     private readonly stickerModel: Model<StickerDocument>,
   ) {}
 
-  async create(input: StickerInput): Promise<Sticker> {
+  async create(input: StickerInput, userId: string): Promise<Sticker> {
     const sticker = new this.stickerModel({
       goalId: input.goalId,
       recipientId: input.recipientId,
       stickerImageId: input.stickerImageId,
+      createdBy: userId,
+      updatedBy: userId,
       // stickerId, grantedBy 등 필요한 필드 추가
     });
     const saved = await sticker.save();
@@ -30,7 +35,7 @@ export class StickersService {
 
   async findAll(): Promise<Sticker[]> {
     const stickers = await this.stickerModel.find();
-    return stickers.map(s => ({
+    return stickers.map((s) => ({
       id: s._id ? s._id.toString() : '',
       goalId: s.goalId,
       recipientId: s.recipientId,
@@ -49,13 +54,18 @@ export class StickersService {
     };
   }
 
-  async update(id: string, input: StickerInput): Promise<Sticker | undefined> {
+  async update(
+    id: string,
+    input: StickerInput,
+    userId: string,
+  ): Promise<Sticker | undefined> {
     const s = await this.stickerModel.findByIdAndUpdate(
       id,
       {
         goalId: input.goalId,
         recipientId: input.recipientId,
         stickerImageId: input.stickerImageId,
+        updatedBy: userId,
       },
       { new: true },
     );
@@ -68,8 +78,14 @@ export class StickersService {
     };
   }
 
-  async remove(id: string): Promise<boolean> {
+  async remove(id: string, userId: string): Promise<boolean> {
+    const s = await this.stickerModel.findByIdAndUpdate(
+      id,
+      { updatedBy: userId },
+      { new: true },
+    );
+    if (!s) return false;
     const res = await this.stickerModel.deleteOne({ _id: id });
     return res.deletedCount > 0;
   }
-} 
+}
