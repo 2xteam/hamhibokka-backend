@@ -3,6 +3,7 @@ import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FollowInput } from './dto/follow.input';
+import { FollowStatus } from './entities/follow-status.entity';
 import { Follow } from './entities/follow.entity';
 import { FollowsService } from './follows.service';
 
@@ -11,13 +12,25 @@ export class FollowsResolver {
   constructor(private readonly followsService: FollowsService) {}
 
   @Query(() => [Follow], { name: 'getFollows' })
-  async getFollows() {
-    return this.followsService.findAll();
+  @UseGuards(JwtAuthGuard)
+  async getFollows(
+    @CurrentUser() userId: string,
+    @Args('status', { nullable: true }) status?: string,
+  ) {
+    return this.followsService.findUserFollows(userId, status);
   }
 
   @Query(() => Follow, { name: 'getFollow', nullable: true })
   async getFollow(@Args('id') id: string) {
     return this.followsService.findOne(id);
+  }
+
+  @Query(() => FollowStatus, { name: 'checkFollowStatus' })
+  async checkFollowStatus(
+    @Args('followerId') followerId: string,
+    @Args('followingId') followingId: string,
+  ) {
+    return this.followsService.checkFollowStatus(followerId, followingId);
   }
 
   @Mutation(() => Follow, { name: 'createFollow' })
@@ -43,5 +56,14 @@ export class FollowsResolver {
   @UseGuards(JwtAuthGuard)
   async deleteFollow(@Args('id') id: string, @CurrentUser() userId: string) {
     return this.followsService.remove(id, userId);
+  }
+
+  @Mutation(() => Follow, { name: 'approveFollow' })
+  @UseGuards(JwtAuthGuard)
+  async approveFollow(
+    @Args('followId') followId: string,
+    @CurrentUser() userId: string,
+  ) {
+    return this.followsService.approveFollow(followId, userId);
   }
 }

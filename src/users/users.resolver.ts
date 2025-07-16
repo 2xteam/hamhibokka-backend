@@ -1,20 +1,32 @@
-import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
-import { UsersService } from './users.service';
-import { User } from './entities/user.entity';
+import { UseGuards } from '@nestjs/common';
+import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UserInput } from './dto/user.input';
+import { User } from './entities/user.entity';
+import { UsersService } from './users.service';
 
 @Resolver(() => User)
 export class UsersResolver {
   constructor(private readonly usersService: UsersService) {}
 
   @Query(() => User, { name: 'getUser', nullable: true })
-  getUser(@Args('id') id: string) {
-    return this.usersService.findOne(id) || null;
+  async getUser(@Args('id') id: string) {
+    return (await this.usersService.findOne(id)) || null;
   }
 
   @Query(() => [User], { name: 'getUsers' })
   getUsers() {
     return this.usersService.findAll();
+  }
+
+  @Query(() => [User], { name: 'searchUsersByNickname' })
+  @UseGuards(JwtAuthGuard)
+  searchUsersByNickname(
+    @Args('nickname') nickname: string,
+    @CurrentUser() currentUser?: string,
+  ) {
+    return this.usersService.findByNickname(nickname, currentUser);
   }
 
   @Mutation(() => User, { name: 'createUser' })
@@ -31,4 +43,4 @@ export class UsersResolver {
   deleteUser(@Args('id') id: string) {
     return this.usersService.remove(id);
   }
-} 
+}

@@ -17,10 +17,25 @@ export class GoalsResolver {
     return this.goalsService.findAll(userId);
   }
 
+  @Query(() => [Goal], { name: 'getGoalsByUserId' })
+  @UseGuards(JwtAuthGuard)
+  async getGoalsByUserId(@Args('userId') targetUserId: string) {
+    return this.goalsService.findAll(targetUserId);
+  }
+
   @Query(() => Goal, { name: 'getGoal', nullable: true })
   @UseGuards(JwtAuthGuard)
   async getGoal(@Args('id') id: string, @CurrentUser() userId: string) {
     return this.goalsService.findOne(id, userId);
+  }
+
+  @Query(() => [Goal], { name: 'searchGoalsByTitle' })
+  @UseGuards(JwtAuthGuard)
+  async searchGoalsByTitle(
+    @Args('title') title: string,
+    @CurrentUser() userId: string,
+  ) {
+    return this.goalsService.searchGoalsByTitle(title, userId);
   }
 
   @Mutation(() => Goal, { name: 'createGoal' })

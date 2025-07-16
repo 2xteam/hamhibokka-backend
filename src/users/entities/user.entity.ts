@@ -1,4 +1,4 @@
-import { ObjectType, Field, ID } from '@nestjs/graphql';
+import { Field, ID, ObjectType } from '@nestjs/graphql';
 
 @ObjectType()
 export class User {
@@ -17,6 +17,9 @@ export class User {
   @Field({ nullable: true })
   profileImage?: string;
 
+  @Field({ nullable: true })
+  isFollowed?: boolean;
+
   // GraphQL에는 노출하지 않음
   password: string;
-} 
+}
