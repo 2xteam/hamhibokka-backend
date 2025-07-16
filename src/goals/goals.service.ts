@@ -21,19 +21,28 @@ export class GoalsService {
   ) {}
 
   async create(input: GoalInput, userId: string): Promise<Goal> {
-    // mode에 따라 visibility, autoApprove 기본값 결정
+    // mode에 따라 visibility, autoApprove, participants 기본값 결정
     let visibility: string | undefined = undefined;
     let autoApprove: boolean | undefined = undefined;
+    let participants: any[] = [];
     const mode = input.mode ? input.mode.toLowerCase() : 'personal';
     if (mode === 'personal') {
       visibility = 'private';
       autoApprove = true;
+      participants = [
+        {
+          userId: userId,
+          currentStickerCount: 0,
+        },
+      ];
     } else if (mode === 'competition') {
       visibility = 'public';
       autoApprove = false;
+      participants = [];
     } else if (mode === 'challenger_recruitment') {
       visibility = 'followers';
       autoApprove = false;
+      participants = [];
     }
     // 입력값이 있으면 우선 적용
     if (input.visibility) visibility = input.visibility.toLowerCase();
@@ -50,12 +59,7 @@ export class GoalsService {
       createdBy: userId,
       updatedBy: userId,
       goalId: `goal_${Math.random().toString(36).substr(2, 9)}`,
-      participants: [
-        {
-          userId: userId,
-          currentStickerCount: 0,
-        },
-      ],
+      participants,
     };
     const goal = new this.goalModel(goalData);
     const saved = await goal.save();
@@ -105,6 +109,93 @@ export class GoalsService {
 
   async findAll(userId?: string): Promise<Goal[]> {
     let goals = await this.goalModel.find();
+
+    // userId가 제공된 경우 visibility에 따른 필터링 적용
+    if (userId) {
+      const filteredGoals: typeof goals = [];
+      for (const goal of goals) {
+        // PUBLIC인 경우 모든 사용자가 볼 수 있음
+        if (goal.visibility === GoalVisibility.PUBLIC) {
+          filteredGoals.push(goal);
+          continue;
+        }
+
+        // PRIVATE인 경우 참여자만 볼 수 있음
+        if (goal.visibility === GoalVisibility.PRIVATE) {
+          if (goal.participants?.some((p) => p.userId === userId)) {
+            filteredGoals.push(goal);
+          }
+          continue;
+        }
+
+        // FOLLOWERS인 경우 팔로워만 볼 수 있음
+        if (goal.visibility === GoalVisibility.FOLLOWERS) {
+          // Goal 생성자를 팔로우하고 있는지 확인
+          const isFollowing = await this.followsService.isFollowing(
+            userId,
+            goal.createdBy,
+          );
+          if (goal.createdBy === userId || isFollowing) {
+            filteredGoals.push(goal);
+          }
+          continue;
+        }
+      }
+      goals = filteredGoals;
+    }
+
+    // 각 goal의 participants에 nickname 조회
+    const goalsWithNicknames = await Promise.all(
+      goals.map(async (g) => {
+        const participantsWithNicknames = await Promise.all(
+          (g.participants || []).map(async (p) => {
+            let nickname: string | undefined = undefined;
+            try {
+              const user = await this.usersService.findByUserId(p.userId);
+              nickname = user?.nickname;
+            } catch (error) {
+              console.error(
+                `Error fetching nickname for user ${p.userId}:`,
+                error,
+              );
+            }
+
+            return {
+              userId: p.userId,
+              nickname,
+              status: p.status,
+              currentStickerCount: p.currentStickerCount,
+              joinedAt: p.joinedAt,
+              stickerReceivedLogs: p.stickerReceivedLogs || [],
+            };
+          }),
+        );
+
+        return {
+          id: g._id ? String(g._id) : '',
+          goalId: g.goalId,
+          title: g.title,
+          description: g.description,
+          stickerCount: g.stickerCount,
+          mode: g.mode,
+          visibility: g.visibility,
+          status: g.status,
+          createdBy: g.createdBy,
+          autoApprove: g.autoApprove,
+          createdAt: g.createdAt,
+          updatedAt: g.updatedAt,
+          participants: participantsWithNicknames,
+        };
+      }),
+    );
+
+    return goalsWithNicknames;
+  }
+
+  async searchGoalsByTitle(title: string, userId?: string): Promise<Goal[]> {
+    let goals = await this.goalModel.find({
+      title: { $regex: title, $options: 'i' },
+    });
 
     // userId가 제공된 경우 visibility에 따른 필터링 적용
     if (userId) {

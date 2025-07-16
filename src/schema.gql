@@ -8,6 +8,7 @@ type User {
   email: String!
   nickname: String!
   profileImage: String
+  isFollowed: Boolean
 }
 
 type AuthPayload {
@@ -15,21 +16,38 @@ type AuthPayload {
   user: User!
 }
 
+type FollowStatus {
+  isFollowed: Boolean!
+  followId: String
+}
+
 type Follow {
   id: ID!
   followerId: String!
   followingId: String!
-}
-
-type StickerReceivedLog {
-  date: DateTime!
-  count: Float!
+  followerNickname: String
+  followingNickname: String
+  followerEmail: String
+  followerProfileImage: String
+  followingEmail: String
+  followingProfileImage: String
+  status: String
+  approvedAt: DateTime
+  createdBy: String
+  updatedBy: String
+  createdAt: DateTime
+  updatedAt: DateTime
 }
 
 """
 A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
 """
 scalar DateTime
+
+type StickerReceivedLog {
+  date: DateTime!
+  count: Float!
+}
 
 type GoalParticipant {
   userId: String!
@@ -96,10 +114,14 @@ type Query {
   hello: String!
   getUser(id: String!): User
   getUsers: [User!]!
-  getGoals: [Goal!]!
-  getGoal(id: String!): Goal
-  getFollows: [Follow!]!
+  searchUsersByNickname(nickname: String!): [User!]!
+  getFollows(status: String): [Follow!]!
   getFollow(id: String!): Follow
+  checkFollowStatus(followerId: String!, followingId: String!): FollowStatus!
+  getGoals: [Goal!]!
+  getGoalsByUserId(userId: String!): [Goal!]!
+  getGoal(id: String!): Goal
+  searchGoalsByTitle(title: String!): [Goal!]!
   getStickers: [Sticker!]!
   getSticker(id: String!): Sticker
   myStickerImages: [StickerImage!]!
@@ -121,13 +143,14 @@ type Mutation {
   createUser(input: UserInput!): User!
   updateUser(id: String!, input: UserInput!): User!
   deleteUser(id: String!): Boolean!
+  createFollow(input: FollowInput!): Follow!
+  updateFollow(id: String!, input: FollowInput!): Follow!
+  deleteFollow(id: String!): Boolean!
+  approveFollow(followId: String!): Follow!
   createGoal(input: GoalInput!): Goal!
   updateGoal(id: String!, input: GoalInput!): Goal!
   deleteGoal(id: String!): Boolean!
   receiveSticker(input: ReceiveStickerInput!): Goal!
-  createFollow(input: FollowInput!): Follow!
-  updateFollow(id: String!, input: FollowInput!): Follow!
-  deleteFollow(id: String!): Boolean!
   createSticker(input: StickerInput!): Sticker!
   updateSticker(id: String!, input: StickerInput!): Sticker!
   deleteSticker(id: String!): Boolean!
@@ -157,6 +180,11 @@ input UserInput {
   password: String!
 }
 
+input FollowInput {
+  followerId: String!
+  followingId: String!
+}
+
 input GoalInput {
   title: String!
   description: String
@@ -172,11 +200,6 @@ input ReceiveStickerInput {
   toUserId: String!
   recipientId: String
   stickerCount: Float
-}
-
-input FollowInput {
-  followerId: String!
-  followingId: String!
 }
 
 input StickerInput {
