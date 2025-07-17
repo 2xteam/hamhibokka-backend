@@ -83,9 +83,9 @@ export class UsersService {
 
     const usersWithFollowStatus = await Promise.all(
       users.map(async (u) => {
-        let isFollowed = false;
+        let followStatus: string | undefined = undefined;
         if (currentUserId && currentUserId !== u.userId) {
-          // 양방향 팔로우 관계 확인 (status가 approved인 경우만)
+          // 양방향 팔로우 관계 확인
           const followStatus1 = await this.followsService.checkFollowStatus(
             currentUserId,
             u.userId,
@@ -95,8 +95,18 @@ export class UsersService {
             currentUserId,
           );
 
-          // 둘 중 하나라도 approved 상태이면 친구 관계로 간주
-          isFollowed = followStatus1.isFollowed || followStatus2.isFollowed;
+          // 둘 중 하나라도 approved 상태이면 approved로 설정
+          if (
+            followStatus1.followStatus === 'approved' ||
+            followStatus2.followStatus === 'approved'
+          ) {
+            followStatus = 'approved';
+          } else if (
+            followStatus1.followStatus === 'pending' ||
+            followStatus2.followStatus === 'pending'
+          ) {
+            followStatus = 'pending';
+          }
         }
 
         return {
@@ -106,7 +116,7 @@ export class UsersService {
           nickname: u.nickname,
           profileImage: u.profileImage,
           password: u.password,
-          isFollowed,
+          followStatus,
         };
       }),
     );

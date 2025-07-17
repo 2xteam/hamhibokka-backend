@@ -17,6 +17,18 @@ export class GoalsResolver {
     return this.goalsService.findAll(userId);
   }
 
+  @Query(() => [Goal], { name: 'getMyParticipatedGoals' })
+  @UseGuards(JwtAuthGuard)
+  async getMyParticipatedGoals(@CurrentUser() userId: string) {
+    return this.goalsService.findMyParticipatedGoals(userId);
+  }
+
+  @Query(() => [Goal], { name: 'getFollowedUsersGoals' })
+  @UseGuards(JwtAuthGuard)
+  async getFollowedUsersGoals(@CurrentUser() userId: string) {
+    return this.goalsService.findFollowedUsersGoals(userId);
+  }
+
   @Query(() => [Goal], { name: 'getGoalsByUserId' })
   @UseGuards(JwtAuthGuard)
   async getGoalsByUserId(@Args('userId') targetUserId: string) {

@@ -110,39 +110,129 @@ export class GoalsService {
   async findAll(userId?: string): Promise<Goal[]> {
     let goals = await this.goalModel.find();
 
-    // userId가 제공된 경우 visibility에 따른 필터링 적용
+    // userId가 제공된 경우 현재 사용자가 생성한 goal만 조회
     if (userId) {
-      const filteredGoals: typeof goals = [];
-      for (const goal of goals) {
-        // PUBLIC인 경우 모든 사용자가 볼 수 있음
-        if (goal.visibility === GoalVisibility.PUBLIC) {
-          filteredGoals.push(goal);
-          continue;
-        }
-
-        // PRIVATE인 경우 참여자만 볼 수 있음
-        if (goal.visibility === GoalVisibility.PRIVATE) {
-          if (goal.participants?.some((p) => p.userId === userId)) {
-            filteredGoals.push(goal);
-          }
-          continue;
-        }
-
-        // FOLLOWERS인 경우 팔로워만 볼 수 있음
-        if (goal.visibility === GoalVisibility.FOLLOWERS) {
-          // Goal 생성자를 팔로우하고 있는지 확인
-          const isFollowing = await this.followsService.isFollowing(
-            userId,
-            goal.createdBy,
-          );
-          if (goal.createdBy === userId || isFollowing) {
-            filteredGoals.push(goal);
-          }
-          continue;
-        }
-      }
-      goals = filteredGoals;
+      goals = goals.filter((goal) => goal.createdBy === userId);
     }
+
+    // 각 goal의 participants에 nickname 조회
+    const goalsWithNicknames = await Promise.all(
+      goals.map(async (g) => {
+        const participantsWithNicknames = await Promise.all(
+          (g.participants || []).map(async (p) => {
+            let nickname: string | undefined = undefined;
+            try {
+              const user = await this.usersService.findByUserId(p.userId);
+              nickname = user?.nickname;
+            } catch (error) {
+              console.error(
+                `Error fetching nickname for user ${p.userId}:`,
+                error,
+              );
+            }
+
+            return {
+              userId: p.userId,
+              nickname,
+              status: p.status,
+              currentStickerCount: p.currentStickerCount,
+              joinedAt: p.joinedAt,
+              stickerReceivedLogs: p.stickerReceivedLogs || [],
+            };
+          }),
+        );
+
+        return {
+          id: g._id ? String(g._id) : '',
+          goalId: g.goalId,
+          title: g.title,
+          description: g.description,
+          stickerCount: g.stickerCount,
+          mode: g.mode,
+          visibility: g.visibility,
+          status: g.status,
+          createdBy: g.createdBy,
+          autoApprove: g.autoApprove,
+          createdAt: g.createdAt,
+          updatedAt: g.updatedAt,
+          participants: participantsWithNicknames,
+        };
+      }),
+    );
+
+    return goalsWithNicknames;
+  }
+
+  async findMyParticipatedGoals(userId: string): Promise<Goal[]> {
+    // 현재 사용자가 참여한 goals만 조회 (생성한 goals는 제외)
+    const goals = await this.goalModel.find({
+      'participants.userId': userId,
+      createdBy: { $ne: userId }, // 내가 생성한 goals는 제외
+    });
+
+    // 각 goal의 participants에 nickname 조회
+    const goalsWithNicknames = await Promise.all(
+      goals.map(async (g) => {
+        const participantsWithNicknames = await Promise.all(
+          (g.participants || []).map(async (p) => {
+            let nickname: string | undefined = undefined;
+            try {
+              const user = await this.usersService.findByUserId(p.userId);
+              nickname = user?.nickname;
+            } catch (error) {
+              console.error(
+                `Error fetching nickname for user ${p.userId}:`,
+                error,
+              );
+            }
+
+            return {
+              userId: p.userId,
+              nickname,
+              status: p.status,
+              currentStickerCount: p.currentStickerCount,
+              joinedAt: p.joinedAt,
+              stickerReceivedLogs: p.stickerReceivedLogs || [],
+            };
+          }),
+        );
+
+        return {
+          id: g._id ? String(g._id) : '',
+          goalId: g.goalId,
+          title: g.title,
+          description: g.description,
+          stickerCount: g.stickerCount,
+          mode: g.mode,
+          visibility: g.visibility,
+          status: g.status,
+          createdBy: g.createdBy,
+          autoApprove: g.autoApprove,
+          createdAt: g.createdAt,
+          updatedAt: g.updatedAt,
+          participants: participantsWithNicknames,
+        };
+      }),
+    );
+
+    return goalsWithNicknames;
+  }
+
+  async findFollowedUsersGoals(userId: string): Promise<Goal[]> {
+    // 현재 사용자가 팔로우하는 사용자들의 ID 목록 조회
+    const followedUsers = await this.followsService.getFollowedUserIds(userId);
+
+    if (followedUsers.length === 0) {
+      return [];
+    }
+
+    // 팔로우하는 사용자들이 생성한 goals 조회 (challenger_recruitment 모드만)
+    const goals = await this.goalModel
+      .find({
+        createdBy: { $in: followedUsers },
+        mode: 'challenger_recruitment',
+      })
+      .sort({ createdAt: -1 });
 
     // 각 goal의 participants에 nickname 조회
     const goalsWithNicknames = await Promise.all(
