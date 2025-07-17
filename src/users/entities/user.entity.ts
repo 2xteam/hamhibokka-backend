@@ -18,7 +18,7 @@ export class User {
   profileImage?: string;
 
   @Field({ nullable: true })
-  isFollowed?: boolean;
+  followStatus?: string;
 
   // GraphQL에는 노출하지 않음
   password: string;

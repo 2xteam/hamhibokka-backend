@@ -160,6 +160,27 @@ export class GoalInvitationsService {
     return invitationsWithGoalInfo;
   }
 
+  async findInvitations(userId: string): Promise<GoalInvitationEntity[]> {
+    // 요청한 사용자가 보낸 초대와 받은 초대를 모두 조회
+    const invitations = await this.invitationModel
+      .find({
+        $or: [{ fromUserId: userId }, { toUserId: userId }],
+      })
+      .sort({ createdAt: -1 });
+
+    // 각 invitation에 대해 goal 정보를 조회하여 포함
+    const invitationsWithGoalInfo = await Promise.all(
+      invitations.map(async (invitation) => {
+        const goal = await this.goalModel.findOne({
+          goalId: invitation.goalId,
+        });
+        return this.mapToEntityWithGoalInfo(invitation, goal);
+      }),
+    );
+
+    return invitationsWithGoalInfo;
+  }
+
   async findReceivedInvitations(
     userId: string,
   ): Promise<GoalInvitationEntity[]> {
@@ -359,7 +380,7 @@ export class GoalInvitationsService {
 
     // 초대/요청이 수락되면 Goal의 participants에 추가
     if (input.status === 'accepted') {
-      await this.addParticipantToGoal(invitation.goalId, userId);
+      await this.addParticipantToGoal(invitation.goalId, invitation.fromUserId);
     }
 
     // goal 정보 조회

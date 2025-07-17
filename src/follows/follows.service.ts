@@ -20,18 +20,61 @@ export class FollowsService {
   ) {}
 
   async create(input: FollowInput, userId: string): Promise<Follow> {
+    // 기존에 반대 방향의 pending 요청이 있는지 확인
+    const existingFollow = await this.followModel.findOne({
+      followerId: input.followingId,
+      followingId: input.followerId,
+      status: 'pending',
+    });
+
+    if (existingFollow) {
+      // 맞팔로우 상황: 기존 요청을 approved로 변경
+      const updatedFollow = await this.followModel.findByIdAndUpdate(
+        existingFollow._id,
+        {
+          status: 'approved',
+          approvedAt: new Date(),
+          updatedBy: userId,
+        },
+        { new: true },
+      );
+
+      if (!updatedFollow) {
+        throw new Error('팔로우 요청 업데이트에 실패했습니다.');
+      }
+
+      return {
+        id: updatedFollow._id ? String(updatedFollow._id) : '',
+        followerId: updatedFollow.followerId,
+        followingId: updatedFollow.followingId,
+        status: updatedFollow.status,
+        approvedAt: updatedFollow.approvedAt,
+        createdBy: updatedFollow.createdBy,
+        updatedBy: updatedFollow.updatedBy,
+        createdAt: (updatedFollow as any).createdAt,
+        updatedAt: (updatedFollow as any).updatedAt,
+      };
+    }
+
+    // 일반적인 팔로우 요청 생성
     const follow = new this.followModel({
       followerId: input.followerId,
       followingId: input.followingId,
+      status: 'pending',
       createdBy: userId,
       updatedBy: userId,
-      // status 등 필요한 필드 추가
     });
     const saved = await follow.save();
     return {
       id: saved._id ? String(saved._id) : '',
       followerId: saved.followerId,
       followingId: saved.followingId,
+      status: saved.status,
+      approvedAt: saved.approvedAt,
+      createdBy: saved.createdBy,
+      updatedBy: saved.updatedBy,
+      createdAt: (saved as any).createdAt,
+      updatedAt: (saved as any).updatedAt,
     };
   }
 
@@ -95,6 +138,15 @@ export class FollowsService {
     return !!follow;
   }
 
+  async getFollowedUserIds(userId: string): Promise<string[]> {
+    const follows = await this.followModel.find({
+      followerId: userId,
+      status: 'approved',
+    });
+
+    return follows.map((follow) => follow.followingId);
+  }
+
   async checkFollowStatus(
     followerId: string,
     followingId: string,
@@ -105,7 +157,7 @@ export class FollowsService {
     });
 
     return {
-      isFollowed: !!follow,
+      followStatus: follow?.status || undefined,
       followId: follow?._id ? String(follow._id) : undefined,
     };
   }

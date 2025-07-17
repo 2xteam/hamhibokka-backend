@@ -8,7 +8,7 @@ type User {
   email: String!
   nickname: String!
   profileImage: String
-  isFollowed: Boolean
+  followStatus: String
 }
 
 type AuthPayload {
@@ -17,7 +17,7 @@ type AuthPayload {
 }
 
 type FollowStatus {
-  isFollowed: Boolean!
+  followStatus: String
   followId: String
 }
 
@@ -119,6 +119,8 @@ type Query {
   getFollow(id: String!): Follow
   checkFollowStatus(followerId: String!, followingId: String!): FollowStatus!
   getGoals: [Goal!]!
+  getMyParticipatedGoals: [Goal!]!
+  getFollowedUsersGoals: [Goal!]!
   getGoalsByUserId(userId: String!): [Goal!]!
   getGoal(id: String!): Goal
   searchGoalsByTitle(title: String!): [Goal!]!
@@ -126,15 +128,8 @@ type Query {
   getSticker(id: String!): Sticker
   myStickerImages: [StickerImage!]!
   defaultStickerImages: [StickerImage!]!
-  getMyInvitations: [GoalInvitation!]!
-  getReceivedInvitations: [GoalInvitation!]!
-  getSentInvitations: [GoalInvitation!]!
+  getInvitations: [GoalInvitation!]!
   getInvitation(id: String!): GoalInvitation
-  getInvitationsByGoalId(goalId: String!): [GoalInvitation!]!
-  getReceivedInvites: [GoalInvitation!]!
-  getSentInvites: [GoalInvitation!]!
-  getSentRequests: [GoalInvitation!]!
-  getInvitationsByStatus(status: String!): [GoalInvitation!]!
 }
 
 type Mutation {
