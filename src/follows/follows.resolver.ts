@@ -33,6 +33,12 @@ export class FollowsResolver {
     return this.followsService.checkFollowStatus(followerId, followingId);
   }
 
+  @Query(() => [Follow], { name: 'getFollowRequests' })
+  @UseGuards(JwtAuthGuard)
+  async getFollowRequests(@CurrentUser() userId: string) {
+    return this.followsService.getFollowRequests(userId);
+  }
+
   @Mutation(() => Follow, { name: 'createFollow' })
   @UseGuards(JwtAuthGuard)
   async createFollow(

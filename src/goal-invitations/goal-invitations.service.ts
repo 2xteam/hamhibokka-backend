@@ -96,6 +96,29 @@ export class GoalInvitationsService {
       throw new BadRequestException('이미 Goal에 참여하고 있습니다.');
     }
 
+    // 내가 만든 goal에 참여 요청하는 경우 바로 participants에 추가
+    if (goal.createdBy === userId) {
+      await this.addParticipantToGoal(input.goalId, userId);
+
+      // 가상의 invitation 객체 생성 (실제로는 DB에 저장하지 않음)
+      const virtualInvitation = {
+        invitationId: `auto_join_${Math.random().toString(36).substr(2, 9)}`,
+        goalId: input.goalId,
+        fromUserId: userId,
+        toUserId: userId,
+        type: InvitationType.REQUEST,
+        status: InvitationStatus.ACCEPTED,
+        message: input.message || '자동 참여',
+        createdBy: userId,
+        updatedBy: userId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        respondedAt: new Date(),
+      };
+
+      return this.mapToEntity(virtualInvitation as any);
+    }
+
     // 이미 요청이 있는지 확인
     const existingInvitation = await this.invitationModel.findOne({
       goalId: input.goalId,
@@ -342,7 +365,7 @@ export class GoalInvitationsService {
   }
 
   async findOne(id: string): Promise<GoalInvitationEntity | undefined> {
-    const invitation = await this.invitationModel.findById(id);
+    const invitation = await this.invitationModel.findOne({ invitationId: id });
     if (!invitation) return undefined;
 
     // goal 정보 조회
@@ -355,7 +378,7 @@ export class GoalInvitationsService {
     input: UpdateGoalInvitationInput,
     userId: string,
   ): Promise<GoalInvitationEntity | undefined> {
-    const invitation = await this.invitationModel.findById(id);
+    const invitation = await this.invitationModel.findOne({ invitationId: id });
     if (!invitation) {
       throw new NotFoundException('초대/요청을 찾을 수 없습니다.');
     }
@@ -365,8 +388,8 @@ export class GoalInvitationsService {
       throw new BadRequestException('응답 권한이 없습니다.');
     }
 
-    const updated = await this.invitationModel.findByIdAndUpdate(
-      id,
+    const updated = await this.invitationModel.findOneAndUpdate(
+      { invitationId: id },
       {
         status: input.status as InvitationStatus,
         message: input.message,
@@ -389,7 +412,7 @@ export class GoalInvitationsService {
   }
 
   async remove(id: string, userId: string): Promise<boolean> {
-    const invitation = await this.invitationModel.findById(id);
+    const invitation = await this.invitationModel.findOne({ invitationId: id });
     if (!invitation) return false;
 
     // 권한 확인: 보낸 사람만 취소할 수 있음
@@ -397,7 +420,7 @@ export class GoalInvitationsService {
       throw new BadRequestException('취소 권한이 없습니다.');
     }
 
-    const res = await this.invitationModel.deleteOne({ _id: id });
+    const res = await this.invitationModel.deleteOne({ invitationId: id });
     return res.deletedCount > 0;
   }
 
