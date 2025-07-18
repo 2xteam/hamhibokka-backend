@@ -79,7 +79,7 @@ export class FollowsService {
   }
 
   async findAll(): Promise<Follow[]> {
-    const follows = await this.followModel.find();
+    const follows = await this.followModel.find().sort({ createdAt: -1 });
     return follows.map((f) => ({
       id: f._id ? String(f._id) : '',
       followerId: f.followerId,
@@ -131,20 +131,152 @@ export class FollowsService {
   }
 
   async isFollowing(followerId: string, followingId: string): Promise<boolean> {
-    const follow = await this.followModel.findOne({
+    // followerId가 요청자, followingId가 대상자인 경우
+    const follow1 = await this.followModel.findOne({
       followerId,
       followingId,
+      status: 'approved',
     });
-    return !!follow;
+
+    // followerId가 대상자, followingId가 요청자인 경우
+    const follow2 = await this.followModel.findOne({
+      followerId: followingId,
+      followingId: followerId,
+      status: 'approved',
+    });
+
+    // 둘 중 하나라도 approved 상태인 관계가 있으면 true
+    return !!(follow1 || follow2);
   }
 
   async getFollowedUserIds(userId: string): Promise<string[]> {
-    const follows = await this.followModel.find({
+    // followerId가 현재 사용자인 경우 (현재 사용자가 팔로우하는 사람들)
+    const followsAsFollower = await this.followModel.find({
       followerId: userId,
       status: 'approved',
     });
 
-    return follows.map((follow) => follow.followingId);
+    // followingId가 현재 사용자인 경우 (현재 사용자를 팔로우하는 사람들)
+    const followsAsFollowing = await this.followModel.find({
+      followingId: userId,
+      status: 'approved',
+    });
+
+    // 두 결과를 합쳐서 중복 제거
+    const allFollowedUsers = new Set<string>();
+
+    // 현재 사용자가 팔로우하는 사람들
+    followsAsFollower.forEach((follow) => {
+      allFollowedUsers.add(follow.followingId);
+    });
+
+    // 현재 사용자를 팔로우하는 사람들
+    followsAsFollowing.forEach((follow) => {
+      allFollowedUsers.add(follow.followerId);
+    });
+
+    const result = Array.from(allFollowedUsers);
+
+    return result;
+  }
+
+  async getFollowRequests(userId: string): Promise<Follow[]> {
+    // 현재 사용자가 받은 pending 상태의 팔로우 요청들
+    const pendingRequests = await this.followModel
+      .find({
+        followingId: userId,
+        status: 'pending',
+      })
+      .sort({ createdAt: -1 });
+
+    // 현재 사용자가 보낸 pending 상태의 팔로우 요청들
+    const sentRequests = await this.followModel
+      .find({
+        followerId: userId,
+        status: 'pending',
+      })
+      .sort({ createdAt: -1 });
+
+    // 받은 요청들 처리
+    const pendingWithUserData = await Promise.all(
+      pendingRequests.map(async (f: any) => {
+        let followerNickname: string | undefined = undefined;
+        let followerEmail: string | undefined = undefined;
+        let followerProfileImage: string | undefined = undefined;
+
+        try {
+          const follower = await this.usersService.findByUserId(f.followerId);
+          followerNickname = follower?.nickname;
+          followerEmail = follower?.email;
+          followerProfileImage = follower?.profileImage;
+        } catch (error) {
+          console.error(
+            `Error fetching follower data for user ${f.followerId}:`,
+            error,
+          );
+        }
+
+        return {
+          id: f._id ? String(f._id) : '',
+          followerId: f.followerId,
+          followingId: f.followingId,
+          followerNickname,
+          followingNickname: undefined,
+          followerEmail,
+          followerProfileImage,
+          followingEmail: undefined,
+          followingProfileImage: undefined,
+          status: f.status,
+          approvedAt: f.approvedAt,
+          createdBy: f.createdBy,
+          updatedBy: f.updatedBy,
+          createdAt: f.createdAt,
+          updatedAt: f.updatedAt,
+        };
+      }),
+    );
+
+    // 보낸 요청들 처리
+    const sentWithUserData = await Promise.all(
+      sentRequests.map(async (f: any) => {
+        let followingNickname: string | undefined = undefined;
+        let followingEmail: string | undefined = undefined;
+        let followingProfileImage: string | undefined = undefined;
+
+        try {
+          const following = await this.usersService.findByUserId(f.followingId);
+          followingNickname = following?.nickname;
+          followingEmail = following?.email;
+          followingProfileImage = following?.profileImage;
+        } catch (error) {
+          console.error(
+            `Error fetching following data for user ${f.followingId}:`,
+            error,
+          );
+        }
+
+        return {
+          id: f._id ? String(f._id) : '',
+          followerId: f.followerId,
+          followingId: f.followingId,
+          followerNickname: undefined,
+          followingNickname,
+          followerEmail: undefined,
+          followerProfileImage: undefined,
+          followingEmail,
+          followingProfileImage,
+          status: f.status,
+          approvedAt: f.approvedAt,
+          createdBy: f.createdBy,
+          updatedBy: f.updatedBy,
+          createdAt: f.createdAt,
+          updatedAt: f.updatedAt,
+        };
+      }),
+    );
+
+    // 받은 요청과 보낸 요청을 합쳐서 반환
+    return [...pendingWithUserData, ...sentWithUserData];
   }
 
   async checkFollowStatus(
@@ -171,7 +303,7 @@ export class FollowsService {
       query.status = status;
     }
 
-    const follows = await this.followModel.find(query);
+    const follows = await this.followModel.find(query).sort({ createdAt: -1 });
 
     const followsWithUserData = await Promise.all(
       follows.map(async (f: any) => {

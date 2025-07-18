@@ -36,7 +36,7 @@ export class UsersService {
   }
 
   async findAll(): Promise<User[]> {
-    const users = await this.userModel.find();
+    const users = await this.userModel.find().sort({ createdAt: -1 });
     return users.map((u) => ({
       id: u._id ? String(u._id) : '',
       userId: u.userId,
@@ -77,9 +77,11 @@ export class UsersService {
     nickname: string,
     currentUserId?: string,
   ): Promise<User[]> {
-    const users = await this.userModel.find({
-      nickname: { $regex: nickname, $options: 'i' },
-    });
+    const users = await this.userModel
+      .find({
+        nickname: { $regex: nickname, $options: 'i' },
+      })
+      .sort({ createdAt: -1 });
 
     const usersWithFollowStatus = await Promise.all(
       users.map(async (u) => {

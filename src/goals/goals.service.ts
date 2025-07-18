@@ -108,7 +108,7 @@ export class GoalsService {
   }
 
   async findAll(userId?: string): Promise<Goal[]> {
-    let goals = await this.goalModel.find();
+    let goals = await this.goalModel.find().sort({ createdAt: -1 });
 
     // userId가 제공된 경우 현재 사용자가 생성한 goal만 조회
     if (userId) {
@@ -165,10 +165,12 @@ export class GoalsService {
 
   async findMyParticipatedGoals(userId: string): Promise<Goal[]> {
     // 현재 사용자가 참여한 goals만 조회 (생성한 goals는 제외)
-    const goals = await this.goalModel.find({
-      'participants.userId': userId,
-      createdBy: { $ne: userId }, // 내가 생성한 goals는 제외
-    });
+    const goals = await this.goalModel
+      .find({
+        'participants.userId': userId,
+        createdBy: { $ne: userId }, // 내가 생성한 goals는 제외
+      })
+      .sort({ createdAt: -1 });
 
     // 각 goal의 participants에 nickname 조회
     const goalsWithNicknames = await Promise.all(
@@ -223,6 +225,7 @@ export class GoalsService {
     const followedUsers = await this.followsService.getFollowedUserIds(userId);
 
     if (followedUsers.length === 0) {
+      console.log('No followed users found');
       return [];
     }
 
@@ -234,9 +237,38 @@ export class GoalsService {
       })
       .sort({ createdAt: -1 });
 
+    // visibility에 따른 필터링 적용
+    const filteredGoals: typeof goals = [];
+    for (const goal of goals) {
+      // PUBLIC인 경우 모든 사용자가 볼 수 있음
+      if (goal.visibility === GoalVisibility.PUBLIC) {
+        filteredGoals.push(goal);
+        continue;
+      }
+
+      // PRIVATE인 경우 조회 제외
+      if (goal.visibility === GoalVisibility.PRIVATE) {
+        continue;
+      }
+
+      // FOLLOWERS인 경우 맞팔로우 상태일 때만 조회
+      if (goal.visibility === GoalVisibility.FOLLOWERS) {
+        // Goal 생성자를 팔로우하고 있는지 확인 (양방향 중 하나라도 approved 상태이면 true)
+        const isFollowing = await this.followsService.isFollowing(
+          userId,
+          goal.createdBy,
+        );
+
+        if (isFollowing) {
+          filteredGoals.push(goal);
+        }
+        continue;
+      }
+    }
+
     // 각 goal의 participants에 nickname 조회
     const goalsWithNicknames = await Promise.all(
-      goals.map(async (g) => {
+      filteredGoals.map(async (g) => {
         const participantsWithNicknames = await Promise.all(
           (g.participants || []).map(async (p) => {
             let nickname: string | undefined = undefined;
@@ -283,9 +315,11 @@ export class GoalsService {
   }
 
   async searchGoalsByTitle(title: string, userId?: string): Promise<Goal[]> {
-    let goals = await this.goalModel.find({
-      title: { $regex: title, $options: 'i' },
-    });
+    let goals = await this.goalModel
+      .find({
+        title: { $regex: title, $options: 'i' },
+      })
+      .sort({ createdAt: -1 });
 
     // userId가 제공된 경우 visibility에 따른 필터링 적용
     if (userId) {

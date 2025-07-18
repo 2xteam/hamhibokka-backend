@@ -118,6 +118,7 @@ type Query {
   getFollows(status: String): [Follow!]!
   getFollow(id: String!): Follow
   checkFollowStatus(followerId: String!, followingId: String!): FollowStatus!
+  getFollowRequests: [Follow!]!
   getGoals: [Goal!]!
   getMyParticipatedGoals: [Goal!]!
   getFollowedUsersGoals: [Goal!]!

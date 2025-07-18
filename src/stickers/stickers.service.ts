@@ -34,7 +34,7 @@ export class StickersService {
   }
 
   async findAll(): Promise<Sticker[]> {
-    const stickers = await this.stickerModel.find();
+    const stickers = await this.stickerModel.find().sort({ createdAt: -1 });
     return stickers.map((s) => ({
       id: s._id ? s._id.toString() : '',
       goalId: s.goalId,
