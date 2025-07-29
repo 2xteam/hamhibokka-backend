@@ -583,8 +583,8 @@ export class GoalsService {
       throw new Error('Goal을 찾을 수 없습니다.');
     }
 
-    // stickerCount 파라미터 처리 (없으면 1)
-    const count = stickerCount && stickerCount > 0 ? stickerCount : 1;
+    // stickerCount 파라미터 처리 (마이너스 값 허용)
+    const count = stickerCount !== undefined ? stickerCount : 1;
     const nowDate = new Date();
 
     // participants 배열에서 해당 사용자의 정보를 업데이트 (매번 새로운 로그 추가)
@@ -593,12 +593,20 @@ export class GoalsService {
         const logs = Array.isArray(p.stickerReceivedLogs)
           ? [...p.stickerReceivedLogs]
           : [];
+        // 새로운 스티커 카운트 계산
+        const newStickerCount = (p.currentStickerCount || 0) + count;
+
+        // 음수 스티커 카운트 방지
+        if (newStickerCount < 0) {
+          throw new Error('스티커 카운트는 0보다 작을 수 없습니다.');
+        }
+
         // stickerCount만큼 반복 push하는 대신, count: stickerCount로 한 번만 push
         logs.push({ date: nowDate, count });
         return {
           userId: p.userId,
           status: p.status || 'active',
-          currentStickerCount: (p.currentStickerCount || 0) + count,
+          currentStickerCount: newStickerCount,
           joinedAt: p.joinedAt || new Date(),
           stickerReceivedLogs: logs,
         };
