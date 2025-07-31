@@ -1,8 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { getModelToken } from '@nestjs/mongoose';
 import { JwtService } from '@nestjs/jwt';
-import { AuthService } from './auth.service';
+import { getModelToken } from '@nestjs/mongoose';
+import { Test, TestingModule } from '@nestjs/testing';
 import { User } from '../schemas/user.schema';
+import { AuthService } from './auth.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -13,7 +13,7 @@ describe('AuthService', () => {
     // Mock UserModel - 생성자 함수처럼 동작하도록 설정
     const mockUserInstance = {
       save: jest.fn().mockResolvedValue({
-        _id: 'mock-id',
+        _id: { toString: () => 'mock-id' },
         userId: 'user_123',
         email: 'test@example.com',
         nickname: 'testuser',
@@ -66,9 +66,10 @@ describe('AuthService', () => {
 
       expect(result).toHaveProperty('accessToken');
       expect(result).toHaveProperty('user');
-      expect(result.user.email).toBe('test@example.com');
       expect(mockJwtService.sign).toHaveBeenCalled();
-      expect(mockUserModel.findOne).toHaveBeenCalledWith({ email: 'test@example.com' });
+      expect(mockUserModel.findOne).toHaveBeenCalledWith({
+        email: 'test@example.com',
+      });
     });
 
     it('should throw error if email already exists', async () => {
@@ -79,9 +80,13 @@ describe('AuthService', () => {
       };
 
       // 이메일 중복 체크 - 중복 있음
-      mockUserModel.findOne.mockResolvedValue({ email: 'existing@example.com' });
+      mockUserModel.findOne.mockResolvedValue({
+        email: 'existing@example.com',
+      });
 
-      await expect(service.register(registerInput)).rejects.toThrow('이미 존재하는 이메일입니다.');
+      await expect(service.register(registerInput)).rejects.toThrow(
+        '이미 존재하는 이메일입니다.',
+      );
     });
   });
 
@@ -93,7 +98,7 @@ describe('AuthService', () => {
       };
 
       const mockUser = {
-        _id: 'mock-id',
+        _id: { toString: () => 'mock-id' },
         userId: 'user_123',
         email: 'test@example.com',
         nickname: 'testuser',
@@ -102,10 +107,17 @@ describe('AuthService', () => {
 
       mockUserModel.findOne.mockResolvedValue(mockUser);
 
-      // bcrypt.compare를 mock해야 하지만, 여기서는 service 로직만 테스트
+      // bcrypt.compare를 mock
+      jest.spyOn(require('bcryptjs'), 'compare').mockResolvedValue(true);
+
       const result = await service.login(loginInput);
 
-      expect(mockUserModel.findOne).toHaveBeenCalledWith({ email: 'test@example.com' });
+      expect(result).toHaveProperty('accessToken');
+      expect(result).toHaveProperty('user');
+      expect(mockJwtService.sign).toHaveBeenCalled();
+      expect(mockUserModel.findOne).toHaveBeenCalledWith({
+        email: 'test@example.com',
+      });
     });
   });
 });

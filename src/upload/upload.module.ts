@@ -1,16 +1,13 @@
 import { Module, forwardRef } from '@nestjs/common';
-import { UploadService } from './upload.service';
-import { UploadController } from './upload.controller';
-import { StickerImagesModule } from '../sticker-images/sticker-images.module';
 import { JwtModule } from '@nestjs/jwt';
+import { StickerImagesModule } from '../sticker-images/sticker-images.module';
+import { AzureUploadService } from './azure-upload.service';
+import { UploadController } from './upload.controller';
 
 @Module({
-  imports: [
-    forwardRef(() => StickerImagesModule),
-    JwtModule,
-  ],
-  providers: [UploadService],
+  imports: [forwardRef(() => StickerImagesModule), JwtModule],
+  providers: [AzureUploadService],
   controllers: [UploadController],
-  exports: [UploadService], 
+  exports: [AzureUploadService],
 })
 export class UploadModule {}

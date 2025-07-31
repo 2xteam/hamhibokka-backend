@@ -1,8 +1,15 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { StickerImage, StickerImageDocument } from '../schemas/sticker-image.schema';
-import { UploadService } from '../upload/upload.service';
+import {
+  StickerImage,
+  StickerImageDocument,
+} from '../schemas/sticker-image.schema';
+import { AzureUploadService } from '../upload/azure-upload.service';
 import { CreateStickerImageInput } from './dto/create-sticker-image.input';
 
 @Injectable()
@@ -10,7 +17,7 @@ export class StickerImagesService {
   constructor(
     @InjectModel(StickerImage.name)
     private stickerImageModel: Model<StickerImageDocument>,
-    private uploadService: UploadService,
+    private uploadService: AzureUploadService,
   ) {}
 
   /**
@@ -21,8 +28,11 @@ export class StickerImagesService {
     createStickerImageInput: CreateStickerImageInput,
     userId: string,
   ) {
-    // S3에 이미지 업로드
-    const uploadResult = await this.uploadService.uploadStickerImage(file, userId);
+    // Azure Blob Storage에 이미지 업로드
+    const uploadResult = await this.uploadService.uploadStickerImage(
+      file,
+      userId,
+    );
 
     // stickerImageId 명시적 생성
     const stickerImageId = `sticker_img_${Math.random().toString(36).substr(2, 9)}`;
@@ -59,14 +69,11 @@ export class StickerImagesService {
   async findUserStickerImages(userId: string) {
     const stickerImages = await this.stickerImageModel
       .find({
-        $or: [
-          { uploadedBy: userId },
-          { isDefault: true },
-        ],
+        $or: [{ uploadedBy: userId }, { isDefault: true }],
       })
       .sort({ createdAt: -1 });
 
-    return stickerImages.map(image => ({
+    return stickerImages.map((image) => ({
       id: image._id && image._id.toString(),
       stickerImageId: image.stickerImageId,
       name: image.name,
@@ -87,8 +94,8 @@ export class StickerImagesService {
       .find({ isDefault: true })
       .sort({ category: 1, name: 1 });
 
-    return stickerImages.map(image => ({
-      id: image._id &&image._id.toString(),
+    return stickerImages.map((image) => ({
+      id: image._id && image._id.toString(),
       stickerImageId: image.stickerImageId,
       name: image.name,
       imageUrl: image.imageUrl,
@@ -119,14 +126,20 @@ export class StickerImagesService {
 
     // 본인이 업로드한 스티커만 삭제 가능
     if (stickerImage.uploadedBy !== userId) {
-      throw new UnauthorizedException('본인이 업로드한 스티커만 삭제할 수 있습니다.');
+      throw new UnauthorizedException(
+        '본인이 업로드한 스티커만 삭제할 수 있습니다.',
+      );
     }
 
-    // S3에서 파일 삭제
+    // Azure Blob Storage에서 파일 삭제
     const fileKey = stickerImage.imageUrl.split('/').slice(-3).join('/');
-    const thumbnailKey = stickerImage.thumbnailUrl.split('/').slice(-4).join('/');
-    
-    await this.uploadService.deleteFiles([fileKey, thumbnailKey]);
+    const thumbnailKey = stickerImage.thumbnailUrl
+      .split('/')
+      .slice(-4)
+      .join('/');
+
+    await this.uploadService.deleteFile(fileKey);
+    await this.uploadService.deleteFile(thumbnailKey);
 
     // DB에서 삭제
     await this.stickerImageModel.deleteOne({ stickerImageId });
