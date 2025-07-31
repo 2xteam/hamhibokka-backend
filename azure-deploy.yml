@@ -31,6 +31,9 @@ jobs:
       - name: Build application
         run: npm run build
 
+      - name: Install production dependencies
+        run: npm ci --only=production
+
       - name: Deploy to Azure App Service
         uses: azure/webapps-deploy@v3
         with:
