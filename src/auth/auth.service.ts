@@ -1,10 +1,14 @@
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { User, UserDocument } from '../schemas/user.schema';
-import { RegisterInput, LoginInput } from './dto/auth.input';
+import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
+import { Model } from 'mongoose';
+import { User, UserDocument } from '../schemas/user.schema';
+import { LoginInput, RegisterInput } from './dto/auth.input';
 
 @Injectable()
 export class AuthService {
@@ -45,7 +49,7 @@ export class AuthService {
     return {
       accessToken,
       user: {
-        id: (user._id as unknown as { toString: () => string }).toString(),
+        id: user._id?.toString() || user._id,
         userId: user.userId,
         email: user.email,
         nickname: user.nickname,
@@ -77,7 +81,7 @@ export class AuthService {
     return {
       accessToken,
       user: {
-        id: (user._id as unknown as { toString: () => string }).toString(),
+        id: user._id?.toString() || user._id,
         userId: user.userId,
         email: user.email,
         nickname: user.nickname,
