@@ -1,7 +1,6 @@
 import { BlobServiceClient, ContainerClient } from '@azure/storage-blob';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -51,26 +50,19 @@ export class AzureUploadService {
     }
 
     try {
-      // 이미지 리사이징
-      const resizedBuffer = await this.resizeImage(file.buffer, 800);
-      const thumbnailBuffer = await this.resizeImage(file.buffer, 200);
-
       // 고유한 파일명 생성
       const stickerImageId = uuidv4();
       const originalKey = `stickers/${stickerImageId}/original.${this.getFileExtension(file.originalname)}`;
-      const thumbnailKey = `stickers/${stickerImageId}/thumbnail.${this.getFileExtension(file.originalname)}`;
 
-      // Azure Blob Storage에 업로드
-      await this.uploadToBlob(originalKey, resizedBuffer, file.mimetype);
-      await this.uploadToBlob(thumbnailKey, thumbnailBuffer, file.mimetype);
+      // Azure Blob Storage에 업로드 (원본 파일 그대로)
+      await this.uploadToBlob(originalKey, file.buffer, file.mimetype);
 
       // 공개 URL 생성
       const imageUrl = this.getPublicUrl(originalKey);
-      const thumbnailUrl = this.getPublicUrl(thumbnailKey);
 
       return {
         originalUrl: imageUrl,
-        thumbnailUrl: thumbnailUrl,
+        thumbnailUrl: imageUrl, // 임시로 원본과 동일하게 설정
         stickerImageId,
         name: name || file.originalname,
         uploadedBy: userId,
@@ -84,13 +76,11 @@ export class AzureUploadService {
   }
 
   /**
-   * 이미지 리사이징
+   * 이미지 리사이징 (임시로 비활성화)
    */
   private async resizeImage(buffer: Buffer, maxWidth: number): Promise<Buffer> {
-    return sharp(buffer)
-      .resize(maxWidth, null, { withoutEnlargement: true })
-      .jpeg({ quality: 90 })
-      .toBuffer();
+    // Sharp 모듈 문제로 임시 비활성화
+    return buffer;
   }
 
   /**
