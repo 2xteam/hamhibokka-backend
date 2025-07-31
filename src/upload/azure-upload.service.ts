@@ -17,6 +17,12 @@ export class AzureUploadService {
     this.containerName =
       this.configService.get<string>('AZURE_STORAGE_CONTAINER_NAME') || '';
 
+    // 로컬 개발 환경에서는 Azure Storage 초기화를 건너뜀
+    if (this.configService.get('NODE_ENV') === 'development') {
+      console.log('Development mode: Azure Storage initialization skipped');
+      return;
+    }
+
     if (!connectionString || !this.containerName) {
       throw new Error('Required Azure Storage configuration is missing');
     }
@@ -53,6 +59,21 @@ export class AzureUploadService {
       // 고유한 파일명 생성
       const stickerImageId = uuidv4();
       const originalKey = `stickers/${stickerImageId}/original.${this.getFileExtension(file.originalname)}`;
+
+      // 개발 환경에서는 더미 URL 반환
+      if (this.configService.get('NODE_ENV') === 'development') {
+        const imageUrl = `http://localhost:3000/dummy/${originalKey}`;
+        return {
+          originalUrl: imageUrl,
+          thumbnailUrl: imageUrl,
+          stickerImageId,
+          name: name || file.originalname,
+          uploadedBy: userId,
+          category: category || '기본',
+          fileSize: file.size,
+          contentType: file.mimetype,
+        };
+      }
 
       // Azure Blob Storage에 업로드 (원본 파일 그대로)
       await this.uploadToBlob(originalKey, file.buffer, file.mimetype);
@@ -119,6 +140,12 @@ export class AzureUploadService {
    * Azure Blob Storage에서 파일 삭제
    */
   async deleteFile(key: string) {
+    // 개발 환경에서는 삭제 작업을 건너뜀
+    if (this.configService.get('NODE_ENV') === 'development') {
+      console.log('Development mode: File deletion skipped for key:', key);
+      return;
+    }
+
     try {
       const blockBlobClient = this.containerClient.getBlockBlobClient(key);
       await blockBlobClient.delete();

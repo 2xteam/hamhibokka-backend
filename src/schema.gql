@@ -147,6 +147,7 @@ type Mutation {
   updateGoal(id: String!, input: GoalInput!): Goal!
   deleteGoal(id: String!): Boolean!
   receiveSticker(input: ReceiveStickerInput!): Goal!
+  leaveGoal(input: LeaveGoalInput!): Goal!
   createSticker(input: StickerInput!): Sticker!
   updateSticker(id: String!, input: StickerInput!): Sticker!
   deleteSticker(id: String!): Boolean!
@@ -196,6 +197,11 @@ input ReceiveStickerInput {
   toUserId: String!
   recipientId: String
   stickerCount: Float
+}
+
+input LeaveGoalInput {
+  goalId: String!
+  participantId: String!
 }
 
 input StickerInput {

@@ -680,4 +680,85 @@ export class GoalsService {
       participants: participantsWithNicknames,
     };
   }
+
+  async leaveGoal(
+    goalId: string,
+    participantId: string,
+    userId: string,
+  ): Promise<Goal> {
+    // 목표 찾기
+    const goal = await this.goalModel.findOne({ goalId });
+    if (!goal) {
+      throw new Error('목표를 찾을 수 없습니다.');
+    }
+
+    // 참여자 목록에서 해당 사용자 찾기
+    const participantIndex = goal.participants?.findIndex(
+      (p) => p.userId === participantId,
+    );
+
+    if (participantIndex === -1 || participantIndex === undefined) {
+      throw new Error('해당 사용자가 이 목표에 참여하고 있지 않습니다.');
+    }
+
+    // 참여자 제거
+    goal.participants.splice(participantIndex, 1);
+    goal.markModified('participants');
+    goal.updatedBy = userId;
+    await goal.save();
+
+    // creator의 nickname 조회
+    let creatorNickname: string | undefined = undefined;
+    if (goal.createdBy) {
+      try {
+        const creator = await this.usersService.findByUserId(goal.createdBy);
+        creatorNickname = creator?.nickname;
+      } catch (error) {
+        console.error('Error fetching creator nickname:', error);
+      }
+    }
+
+    // participants의 nickname 조회
+    const participantsWithNicknames: any[] = [];
+    if (goal.participants) {
+      for (const participant of goal.participants) {
+        let nickname: string | undefined = undefined;
+        try {
+          const user = await this.usersService.findByUserId(participant.userId);
+          nickname = user?.nickname;
+        } catch (error) {
+          console.error(
+            `Error fetching nickname for user ${participant.userId}:`,
+            error,
+          );
+        }
+
+        participantsWithNicknames.push({
+          userId: participant.userId,
+          nickname,
+          status: participant.status,
+          currentStickerCount: participant.currentStickerCount,
+          joinedAt: participant.joinedAt,
+          stickerReceivedLogs: participant.stickerReceivedLogs || [],
+        });
+      }
+    }
+
+    return {
+      id: goal._id ? goal._id.toString() : '',
+      goalId: goal.goalId,
+      title: goal.title,
+      description: goal.description,
+      stickerCount: goal.stickerCount,
+      mode: goal.mode,
+      visibility: goal.visibility,
+      status: goal.status,
+      createdBy: goal.createdBy,
+      creatorNickname,
+      autoApprove: goal.autoApprove,
+      createdAt: goal.createdAt,
+      updatedAt: goal.updatedAt,
+      participants: participantsWithNicknames,
+    };
+  }
 }
