@@ -33,7 +33,7 @@ export class User {
 export const UserSchema = SchemaFactory.createForClass(User);
 
 // 고유 ID 자동 생성을 위한 미들웨어
-UserSchema.pre('save', function(next) {
+UserSchema.pre('save', function (next) {
   if (!this.userId) {
     this.userId = `user_${Math.random().toString(36).substr(2, 9)}`;
   }

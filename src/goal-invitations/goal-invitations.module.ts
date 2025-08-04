@@ -5,6 +5,7 @@ import {
   GoalInvitationSchema,
 } from '../schemas/goal-invitation.schema';
 import { Goal, GoalSchema } from '../schemas/goal.schema';
+import { UsersModule } from '../users/users.module';
 import { GoalInvitationsResolver } from './goal-invitations.resolver';
 import { GoalInvitationsService } from './goal-invitations.service';
 
@@ -14,6 +15,7 @@ import { GoalInvitationsService } from './goal-invitations.service';
       { name: GoalInvitation.name, schema: GoalInvitationSchema },
       { name: Goal.name, schema: GoalSchema },
     ]),
+    UsersModule,
   ],
   providers: [GoalInvitationsResolver, GoalInvitationsService],
   exports: [GoalInvitationsService],

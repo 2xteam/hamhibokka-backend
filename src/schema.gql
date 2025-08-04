@@ -89,6 +89,8 @@ type GoalInvitation {
   createdAt: DateTime!
   updatedAt: DateTime!
   goal: Goal
+  fromUser: User
+  toUser: User
 }
 
 type StickerImage {
@@ -115,6 +117,7 @@ type Query {
   getUser(id: String!): User
   getUsers: [User!]!
   searchUsersByNickname(nickname: String!): [User!]!
+  getMyProfileImage: String
   getFollows(status: String): [Follow!]!
   getFollow(id: String!): Follow
   checkFollowStatus(followerId: String!, followingId: String!): FollowStatus!
@@ -138,6 +141,7 @@ type Mutation {
   login(loginInput: LoginInput!): AuthPayload!
   createUser(input: UserInput!): User!
   updateUser(id: String!, input: UserInput!): User!
+  updateProfileImage(input: UpdateProfileImageInput!): User!
   deleteUser(id: String!): Boolean!
   createFollow(input: FollowInput!): Follow!
   updateFollow(id: String!, input: FollowInput!): Follow!
@@ -175,6 +179,10 @@ input UserInput {
   profileImage: String
   userId: String!
   password: String!
+}
+
+input UpdateProfileImageInput {
+  profileImage: String!
 }
 
 input FollowInput {

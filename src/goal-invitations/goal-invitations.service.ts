@@ -12,6 +12,7 @@ import {
   InvitationType,
 } from '../schemas/goal-invitation.schema';
 import { Goal, GoalDocument } from '../schemas/goal.schema';
+import { UsersService } from '../users/users.service';
 import {
   CreateGoalInvitationInput,
   CreateGoalJoinRequestInput,
@@ -26,6 +27,7 @@ export class GoalInvitationsService {
     private readonly invitationModel: Model<GoalInvitationDocument>,
     @InjectModel(Goal.name)
     private readonly goalModel: Model<GoalDocument>,
+    private readonly usersService: UsersService,
   ) {}
 
   async create(
@@ -75,7 +77,7 @@ export class GoalInvitationsService {
     });
 
     const saved = await invitation.save();
-    return this.mapToEntity(saved);
+    return await this.mapToEntity(saved);
   }
 
   async createJoinRequest(
@@ -116,7 +118,7 @@ export class GoalInvitationsService {
         respondedAt: new Date(),
       };
 
-      return this.mapToEntity(virtualInvitation as any);
+      return await this.mapToEntity(virtualInvitation as any);
     }
 
     // 이미 요청이 있는지 확인
@@ -160,7 +162,7 @@ export class GoalInvitationsService {
     });
 
     const saved = await invitation.save();
-    return this.mapToEntity(saved);
+    return await this.mapToEntity(saved);
   }
 
   async findAll(userId: string): Promise<GoalInvitationEntity[]> {
@@ -176,7 +178,7 @@ export class GoalInvitationsService {
         const goal = await this.goalModel.findOne({
           goalId: invitation.goalId,
         });
-        return this.mapToEntityWithGoalInfo(invitation, goal);
+        return await this.mapToEntityWithGoalInfo(invitation, goal);
       }),
     );
 
@@ -197,7 +199,7 @@ export class GoalInvitationsService {
         const goal = await this.goalModel.findOne({
           goalId: invitation.goalId,
         });
-        return this.mapToEntityWithGoalInfo(invitation, goal);
+        return await this.mapToEntityWithGoalInfo(invitation, goal);
       }),
     );
 
@@ -441,9 +443,25 @@ export class GoalInvitationsService {
     );
   }
 
-  private mapToEntity(
+  private async mapToEntity(
     invitation: GoalInvitationDocument,
-  ): GoalInvitationEntity {
+  ): Promise<GoalInvitationEntity> {
+    // fromUser와 toUser 정보 조회
+    let fromUser: any = undefined;
+    let toUser: any = undefined;
+
+    try {
+      fromUser = await this.usersService.findByUserId(invitation.fromUserId);
+    } catch (error) {
+      console.error('Error fetching fromUser:', error);
+    }
+
+    try {
+      toUser = await this.usersService.findByUserId(invitation.toUserId);
+    } catch (error) {
+      console.error('Error fetching toUser:', error);
+    }
+
     return {
       id: invitation._id ? String(invitation._id) : '',
       invitationId: invitation.invitationId || '',
@@ -456,14 +474,32 @@ export class GoalInvitationsService {
       respondedAt: invitation.respondedAt,
       createdAt: invitation.createdAt || new Date(),
       updatedAt: invitation.updatedAt || new Date(),
+      fromUser: fromUser
+        ? {
+            id: fromUser._id ? String(fromUser._id) : '',
+            userId: fromUser.userId,
+            email: fromUser.email,
+            nickname: fromUser.nickname,
+            profileImage: fromUser.profileImage,
+          }
+        : undefined,
+      toUser: toUser
+        ? {
+            id: toUser._id ? String(toUser._id) : '',
+            userId: toUser.userId,
+            email: toUser.email,
+            nickname: toUser.nickname,
+            profileImage: toUser.profileImage,
+          }
+        : undefined,
     };
   }
 
-  private mapToEntityWithGoalInfo(
+  private async mapToEntityWithGoalInfo(
     invitation: GoalInvitationDocument,
     goal: GoalDocument | null,
-  ): GoalInvitationEntity {
-    const baseEntity = this.mapToEntity(invitation);
+  ): Promise<GoalInvitationEntity> {
+    const baseEntity = await this.mapToEntity(invitation);
 
     // Goal 엔티티로 변환
     const goalEntity = goal

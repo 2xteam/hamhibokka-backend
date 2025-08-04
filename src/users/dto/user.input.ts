@@ -1,4 +1,4 @@
-import { InputType, Field } from '@nestjs/graphql';
+import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class UserInput {
@@ -16,4 +16,10 @@ export class UserInput {
 
   @Field()
   password: string;
-} 
+}
+
+@InputType()
+export class UpdateProfileImageInput {
+  @Field()
+  profileImage: string;
+}
