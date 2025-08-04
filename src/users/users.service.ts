@@ -31,7 +31,6 @@ export class UsersService {
       email: saved.email,
       nickname: saved.nickname,
       profileImage: saved.profileImage,
-      password: saved.password,
     };
   }
 
@@ -43,7 +42,6 @@ export class UsersService {
       email: u.email,
       nickname: u.nickname,
       profileImage: u.profileImage,
-      password: u.password,
     }));
   }
 
@@ -56,7 +54,6 @@ export class UsersService {
       email: u.email,
       nickname: u.nickname,
       profileImage: u.profileImage,
-      password: u.password,
     };
   }
 
@@ -69,7 +66,6 @@ export class UsersService {
       email: u.email,
       nickname: u.nickname,
       profileImage: u.profileImage,
-      password: u.password,
     };
   }
 
@@ -83,52 +79,48 @@ export class UsersService {
       })
       .sort({ createdAt: -1 });
 
-    const usersWithFollowStatus = await Promise.all(
-      users.map(async (u) => {
-        let followStatus: string | undefined = undefined;
-        if (currentUserId && currentUserId !== u.userId) {
-          // 양방향 팔로우 관계 확인
-          const followStatus1 = await this.followsService.checkFollowStatus(
-            currentUserId,
-            u.userId,
-          );
-          const followStatus2 = await this.followsService.checkFollowStatus(
-            u.userId,
-            currentUserId,
-          );
+    const mappedUsers = users.map((u) => ({
+      id: u._id ? String(u._id) : '',
+      userId: u.userId,
+      email: u.email,
+      nickname: u.nickname,
+      profileImage: u.profileImage,
+    }));
 
-          // 둘 중 하나라도 approved 상태이면 approved로 설정
-          if (
-            followStatus1.followStatus === 'approved' ||
-            followStatus2.followStatus === 'approved'
-          ) {
-            followStatus = 'approved';
-          } else if (
-            followStatus1.followStatus === 'pending' ||
-            followStatus2.followStatus === 'pending'
-          ) {
-            followStatus = 'pending';
+    // 본인 계정 제외
+    const filteredUsers = mappedUsers.filter(
+      (user) => user.userId !== currentUserId,
+    );
+
+    // followStatus 추가
+    const usersWithFollowStatus = await Promise.all(
+      filteredUsers.map(async (user) => {
+        let followStatus: string | undefined = undefined;
+
+        if (currentUserId && user.userId !== currentUserId) {
+          try {
+            const followStatusData =
+              await this.followsService.checkFollowStatus(
+                currentUserId,
+                user.userId,
+              );
+            followStatus = followStatusData.followStatus;
+          } catch (error) {
+            console.error(
+              `Error fetching follow status for user ${user.userId}:`,
+              error,
+            );
           }
         }
 
         return {
-          id: u._id ? String(u._id) : '',
-          userId: u.userId,
-          email: u.email,
-          nickname: u.nickname,
-          profileImage: u.profileImage,
-          password: u.password,
+          ...user,
           followStatus,
         };
       }),
     );
 
-    // 본인 계정 제외
-    const filteredUsers = usersWithFollowStatus.filter(
-      (user) => user.userId !== currentUserId,
-    );
-
-    return filteredUsers;
+    return usersWithFollowStatus;
   }
 
   async update(id: string, input: UserInput): Promise<User | undefined> {
@@ -151,12 +143,32 @@ export class UsersService {
       email: u.email,
       nickname: u.nickname,
       profileImage: u.profileImage,
-      password: u.password,
     };
   }
 
   async remove(id: string): Promise<boolean> {
     const res = await this.userModel.deleteOne({ _id: id });
     return res.deletedCount > 0;
+  }
+
+  async updateProfileImage(
+    userId: string,
+    profileImageUrl: string,
+  ): Promise<User | undefined> {
+    const user = await this.userModel.findOneAndUpdate(
+      { userId },
+      { profileImage: profileImageUrl },
+      { new: true },
+    );
+
+    if (!user) return undefined;
+
+    return {
+      id: user._id ? String(user._id) : '',
+      userId: user.userId,
+      email: user.email,
+      nickname: user.nickname,
+      profileImage: user.profileImage,
+    };
   }
 }

@@ -17,21 +17,17 @@ export class AzureUploadService {
     this.containerName =
       this.configService.get<string>('AZURE_STORAGE_CONTAINER_NAME') || '';
 
-    // 로컬 개발 환경에서는 Azure Storage 초기화를 건너뜀
-    if (this.configService.get('NODE_ENV') === 'development') {
-      console.log('Development mode: Azure Storage initialization skipped');
-      return;
+    // Azure Storage 설정이 있으면 초기화
+    if (connectionString && this.containerName) {
+      this.blobServiceClient =
+        BlobServiceClient.fromConnectionString(connectionString);
+      this.containerClient = this.blobServiceClient.getContainerClient(
+        this.containerName,
+      );
+      console.log('Azure Storage initialized successfully');
+    } else {
+      console.log('Azure Storage configuration not found, using dummy URLs');
     }
-
-    if (!connectionString || !this.containerName) {
-      throw new Error('Required Azure Storage configuration is missing');
-    }
-
-    this.blobServiceClient =
-      BlobServiceClient.fromConnectionString(connectionString);
-    this.containerClient = this.blobServiceClient.getContainerClient(
-      this.containerName,
-    );
   }
 
   /**
@@ -60,8 +56,26 @@ export class AzureUploadService {
       const stickerImageId = uuidv4();
       const originalKey = `stickers/${stickerImageId}/original.${this.getFileExtension(file.originalname)}`;
 
-      // 개발 환경에서는 더미 URL 반환
-      if (this.configService.get('NODE_ENV') === 'development') {
+      // Azure Storage가 설정되어 있으면 실제 업로드
+      if (this.containerClient) {
+        // Azure Blob Storage에 업로드 (원본 파일 그대로)
+        await this.uploadToBlob(originalKey, file.buffer, file.mimetype);
+
+        // 공개 URL 생성
+        const imageUrl = this.getPublicUrl(originalKey);
+
+        return {
+          originalUrl: imageUrl,
+          thumbnailUrl: imageUrl, // 임시로 원본과 동일하게 설정
+          stickerImageId,
+          name: name || file.originalname,
+          uploadedBy: userId,
+          category: category || '기본',
+          fileSize: file.size,
+          contentType: file.mimetype,
+        };
+      } else {
+        // Azure Storage 설정이 없으면 더미 URL 반환
         const imageUrl = `http://localhost:3000/dummy/${originalKey}`;
         return {
           originalUrl: imageUrl,
@@ -74,23 +88,6 @@ export class AzureUploadService {
           contentType: file.mimetype,
         };
       }
-
-      // Azure Blob Storage에 업로드 (원본 파일 그대로)
-      await this.uploadToBlob(originalKey, file.buffer, file.mimetype);
-
-      // 공개 URL 생성
-      const imageUrl = this.getPublicUrl(originalKey);
-
-      return {
-        originalUrl: imageUrl,
-        thumbnailUrl: imageUrl, // 임시로 원본과 동일하게 설정
-        stickerImageId,
-        name: name || file.originalname,
-        uploadedBy: userId,
-        category: category || '기본',
-        fileSize: file.size,
-        contentType: file.mimetype,
-      };
     } catch (error) {
       throw new BadRequestException(`이미지 업로드 실패: ${error.message}`);
     }
@@ -159,5 +156,55 @@ export class AzureUploadService {
    */
   private getFileExtension(filename: string): string {
     return filename.split('.').pop()?.toLowerCase() || 'jpg';
+  }
+
+  async uploadProfileImage(file: Express.Multer.File, userId: string) {
+    if (!file) {
+      throw new BadRequestException('파일이 필요합니다.');
+    }
+
+    // 파일 타입 검증
+    if (!file.mimetype.startsWith('image/')) {
+      throw new BadRequestException('이미지 파일만 업로드 가능합니다.');
+    }
+
+    try {
+      // 고유한 파일명 생성
+      const profileImageId = uuidv4();
+      const originalKey = `profiles/${profileImageId}/original.${this.getFileExtension(file.originalname)}`;
+
+      // Azure Storage가 설정되어 있으면 실제 업로드
+      if (this.containerClient) {
+        // Azure Blob Storage에 업로드 (원본 파일 그대로)
+        await this.uploadToBlob(originalKey, file.buffer, file.mimetype);
+
+        // 공개 URL 생성
+        const imageUrl = this.getPublicUrl(originalKey);
+
+        return {
+          originalUrl: imageUrl,
+          thumbnailUrl: imageUrl, // 임시로 원본과 동일하게 설정
+          profileImageId,
+          uploadedBy: userId,
+          fileSize: file.size,
+          contentType: file.mimetype,
+        };
+      } else {
+        // Azure Storage 설정이 없으면 더미 URL 반환
+        const imageUrl = `http://localhost:3000/dummy/${originalKey}`;
+        return {
+          originalUrl: imageUrl,
+          thumbnailUrl: imageUrl,
+          profileImageId,
+          uploadedBy: userId,
+          fileSize: file.size,
+          contentType: file.mimetype,
+        };
+      }
+    } catch (error) {
+      throw new BadRequestException(
+        `프로필 이미지 업로드 실패: ${error.message}`,
+      );
+    }
   }
 }

@@ -21,5 +21,5 @@ export class User {
   followStatus?: string;
 
   // GraphQL에는 노출하지 않음
-  password: string;
+  password?: string;
 }
