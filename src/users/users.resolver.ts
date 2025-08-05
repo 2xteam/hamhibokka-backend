@@ -2,7 +2,11 @@ import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { UpdateProfileImageInput, UserInput } from './dto/user.input';
+import {
+  UpdateNicknameInput,
+  UpdateProfileImageInput,
+  UserInput,
+} from './dto/user.input';
 import { User } from './entities/user.entity';
 import { UsersService } from './users.service';
 
@@ -53,6 +57,15 @@ export class UsersResolver {
     @CurrentUser() userId: string,
   ) {
     return this.usersService.updateProfileImage(userId, input.profileImage);
+  }
+
+  @Mutation(() => User, { name: 'updateNickname' })
+  @UseGuards(JwtAuthGuard)
+  updateNickname(
+    @Args('input') input: UpdateNicknameInput,
+    @CurrentUser() userId: string,
+  ) {
+    return this.usersService.updateNickname(userId, input.nickname);
   }
 
   @Mutation(() => Boolean, { name: 'deleteUser' })

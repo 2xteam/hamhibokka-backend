@@ -4,7 +4,6 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GoalInput } from './dto/goal.input';
 import { LeaveGoalInput } from './dto/leave-goal.input';
-import { ReceiveStickerInput } from './dto/receive-sticker.input';
 import { Goal } from './entities/goal.entity';
 import { GoalsService } from './goals.service';
 
@@ -74,20 +73,6 @@ export class GoalsResolver {
   @UseGuards(JwtAuthGuard)
   async deleteGoal(@Args('id') id: string, @CurrentUser() userId: string) {
     return this.goalsService.remove(id, userId);
-  }
-
-  @Mutation(() => Goal, { name: 'receiveSticker' })
-  @UseGuards(JwtAuthGuard)
-  async receiveSticker(
-    @Args('input') input: ReceiveStickerInput,
-    @CurrentUser() userId: string,
-  ) {
-    return this.goalsService.receiveSticker(
-      input.goalId,
-      input.toUserId,
-      userId,
-      input.stickerCount,
-    );
   }
 
   @Mutation(() => Goal, { name: 'leaveGoal' })

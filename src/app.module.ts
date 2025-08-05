@@ -9,8 +9,6 @@ import { DatabaseModule } from './database/database.module';
 import { FollowsModule } from './follows/follows.module';
 import { GoalInvitationsModule } from './goal-invitations/goal-invitations.module';
 import { GoalsModule } from './goals/goals.module';
-import { StickerImagesModule } from './sticker-images/sticker-images.module';
-import { StickersModule } from './stickers/stickers.module';
 import { UploadModule } from './upload/upload.module';
 import { UsersModule } from './users/users.module';
 
@@ -31,9 +29,7 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     GoalsModule,
     FollowsModule,
-    StickersModule,
     UploadModule,
-    StickerImagesModule,
     GoalInvitationsModule,
   ],
   providers: [AppResolver],

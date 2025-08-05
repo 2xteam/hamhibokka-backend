@@ -69,9 +69,11 @@ export class GoalsService {
     if (saved.participants) {
       for (const participant of saved.participants) {
         let nickname: string | undefined = undefined;
+        let profileImage: string | undefined = undefined;
         try {
           const user = await this.usersService.findByUserId(participant.userId);
           nickname = user?.nickname;
+          profileImage = user?.profileImage;
         } catch (error) {
           console.error(
             `Error fetching nickname for user ${participant.userId}:`,
@@ -82,6 +84,7 @@ export class GoalsService {
         participantsWithNicknames.push({
           userId: participant.userId,
           nickname,
+          profileImage,
           status: participant.status,
           currentStickerCount: participant.currentStickerCount,
           joinedAt: participant.joinedAt,
@@ -121,9 +124,11 @@ export class GoalsService {
         const participantsWithNicknames = await Promise.all(
           (g.participants || []).map(async (p) => {
             let nickname: string | undefined = undefined;
+            let profileImage: string | undefined = undefined;
             try {
               const user = await this.usersService.findByUserId(p.userId);
               nickname = user?.nickname;
+              profileImage = user?.profileImage;
             } catch (error) {
               console.error(
                 `Error fetching nickname for user ${p.userId}:`,
@@ -134,6 +139,7 @@ export class GoalsService {
             return {
               userId: p.userId,
               nickname,
+              profileImage,
               status: p.status,
               currentStickerCount: p.currentStickerCount,
               joinedAt: p.joinedAt,
@@ -178,9 +184,11 @@ export class GoalsService {
         const participantsWithNicknames = await Promise.all(
           (g.participants || []).map(async (p) => {
             let nickname: string | undefined = undefined;
+            let profileImage: string | undefined = undefined;
             try {
               const user = await this.usersService.findByUserId(p.userId);
               nickname = user?.nickname;
+              profileImage = user?.profileImage;
             } catch (error) {
               console.error(
                 `Error fetching nickname for user ${p.userId}:`,
@@ -191,6 +199,7 @@ export class GoalsService {
             return {
               userId: p.userId,
               nickname,
+              profileImage,
               status: p.status,
               currentStickerCount: p.currentStickerCount,
               joinedAt: p.joinedAt,
@@ -272,9 +281,11 @@ export class GoalsService {
         const participantsWithNicknames = await Promise.all(
           (g.participants || []).map(async (p) => {
             let nickname: string | undefined = undefined;
+            let profileImage: string | undefined = undefined;
             try {
               const user = await this.usersService.findByUserId(p.userId);
               nickname = user?.nickname;
+              profileImage = user?.profileImage;
             } catch (error) {
               console.error(
                 `Error fetching nickname for user ${p.userId}:`,
@@ -285,6 +296,7 @@ export class GoalsService {
             return {
               userId: p.userId,
               nickname,
+              profileImage,
               status: p.status,
               currentStickerCount: p.currentStickerCount,
               joinedAt: p.joinedAt,
@@ -361,9 +373,11 @@ export class GoalsService {
         const participantsWithNicknames = await Promise.all(
           (g.participants || []).map(async (p) => {
             let nickname: string | undefined = undefined;
+            let profileImage: string | undefined = undefined;
             try {
               const user = await this.usersService.findByUserId(p.userId);
               nickname = user?.nickname;
+              profileImage = user?.profileImage;
             } catch (error) {
               console.error(
                 `Error fetching nickname for user ${p.userId}:`,
@@ -374,6 +388,7 @@ export class GoalsService {
             return {
               userId: p.userId,
               nickname,
+              profileImage,
               status: p.status,
               currentStickerCount: p.currentStickerCount,
               joinedAt: p.joinedAt,
@@ -409,10 +424,12 @@ export class GoalsService {
 
     // creator의 nickname 조회
     let creatorNickname: string | undefined = undefined;
+    let creatorProfileImage: string | undefined = undefined;
     if (g.createdBy) {
       try {
         const creator = await this.usersService.findByUserId(g.createdBy);
         creatorNickname = creator?.nickname;
+        creatorProfileImage = creator?.profileImage;
       } catch (error) {
         console.error('Error fetching creator nickname:', error);
       }
@@ -423,9 +440,11 @@ export class GoalsService {
     if (g.participants) {
       for (const participant of g.participants) {
         let nickname: string | undefined = undefined;
+        let profileImage: string | undefined = undefined;
         try {
           const user = await this.usersService.findByUserId(participant.userId);
           nickname = user?.nickname;
+          profileImage = user?.profileImage;
         } catch (error) {
           console.error(
             `Error fetching nickname for user ${participant.userId}:`,
@@ -436,6 +455,7 @@ export class GoalsService {
         participantsWithNicknames.push({
           userId: participant.userId,
           nickname,
+          profileImage,
           status: participant.status,
           currentStickerCount: participant.currentStickerCount,
           joinedAt: participant.joinedAt,
@@ -461,6 +481,7 @@ export class GoalsService {
       status: g.status,
       createdBy: g.createdBy,
       creatorNickname,
+      creatorProfileImage,
       autoApprove: g.autoApprove,
       createdAt: g.createdAt,
       updatedAt: g.updatedAt,
@@ -519,9 +540,11 @@ export class GoalsService {
     if (g.participants) {
       for (const participant of g.participants) {
         let nickname: string | undefined = undefined;
+        let profileImage: string | undefined = undefined;
         try {
           const user = await this.usersService.findByUserId(participant.userId);
           nickname = user?.nickname;
+          profileImage = user?.profileImage;
         } catch (error) {
           console.error(
             `Error fetching nickname for user ${participant.userId}:`,
@@ -532,6 +555,7 @@ export class GoalsService {
         participantsWithNicknames.push({
           userId: participant.userId,
           nickname,
+          profileImage,
           status: participant.status,
           currentStickerCount: participant.currentStickerCount,
           joinedAt: participant.joinedAt,
@@ -558,127 +582,13 @@ export class GoalsService {
   }
 
   async remove(id: string, userId: string): Promise<boolean> {
-    // 필요하다면 삭제 전 updatedBy를 기록할 수 있음
-    const g = await this.goalModel.findByIdAndUpdate(
-      id,
-      { updatedBy: userId },
-      { new: true },
-    );
+    const g = await this.goalModel.findOne({
+      _id: id,
+      createdBy: userId,
+    });
     if (!g) return false;
     const res = await this.goalModel.deleteOne({ _id: id });
     return res.deletedCount > 0;
-  }
-
-  async receiveSticker(
-    goalId: string,
-    toUserId: string,
-    userId: string,
-    stickerCount?: number,
-  ): Promise<Goal> {
-    // toUserId를 recipientId로 매핑
-    const recipientId = toUserId;
-    // Goal이 존재하는지 확인
-    const goal = await this.goalModel.findOne({ goalId });
-    if (!goal) {
-      throw new Error('Goal을 찾을 수 없습니다.');
-    }
-
-    // stickerCount 파라미터 처리 (마이너스 값 허용)
-    const count = stickerCount !== undefined ? stickerCount : 1;
-    const nowDate = new Date();
-
-    // participants 배열에서 해당 사용자의 정보를 업데이트 (매번 새로운 로그 추가)
-    goal.participants = [...(goal.participants || [])].map((p) => {
-      if (p.userId === recipientId) {
-        const logs = Array.isArray(p.stickerReceivedLogs)
-          ? [...p.stickerReceivedLogs]
-          : [];
-        // 새로운 스티커 카운트 계산
-        const newStickerCount = (p.currentStickerCount || 0) + count;
-
-        // 음수 스티커 카운트 방지
-        if (newStickerCount < 0) {
-          throw new Error('스티커 카운트는 0보다 작을 수 없습니다.');
-        }
-
-        // stickerCount만큼 반복 push하는 대신, count: stickerCount로 한 번만 push
-        logs.push({ date: nowDate, count });
-        return {
-          userId: p.userId,
-          status: p.status || 'active',
-          currentStickerCount: newStickerCount,
-          joinedAt: p.joinedAt || new Date(),
-          stickerReceivedLogs: logs,
-        };
-      }
-      return {
-        userId: p.userId,
-        status: p.status || 'active',
-        currentStickerCount: p.currentStickerCount || 0,
-        joinedAt: p.joinedAt || new Date(),
-        stickerReceivedLogs: Array.isArray(p.stickerReceivedLogs)
-          ? p.stickerReceivedLogs
-          : [],
-      };
-    });
-
-    goal.markModified('participants');
-    goal.updatedBy = userId;
-    await goal.save();
-
-    // creator의 nickname 조회
-    let creatorNickname: string | undefined = undefined;
-    if (goal.createdBy) {
-      try {
-        const creator = await this.usersService.findByUserId(goal.createdBy);
-        creatorNickname = creator?.nickname;
-      } catch (error) {
-        console.error('Error fetching creator nickname:', error);
-      }
-    }
-
-    // participants의 nickname 조회
-    const participantsWithNicknames: any[] = [];
-    if (goal.participants) {
-      for (const participant of goal.participants) {
-        let nickname: string | undefined = undefined;
-        try {
-          const user = await this.usersService.findByUserId(participant.userId);
-          nickname = user?.nickname;
-        } catch (error) {
-          console.error(
-            `Error fetching nickname for user ${participant.userId}:`,
-            error,
-          );
-        }
-
-        participantsWithNicknames.push({
-          userId: participant.userId,
-          nickname,
-          status: participant.status,
-          currentStickerCount: participant.currentStickerCount,
-          joinedAt: participant.joinedAt,
-          stickerReceivedLogs: participant.stickerReceivedLogs || [],
-        });
-      }
-    }
-
-    return {
-      id: goal._id ? goal._id.toString() : '',
-      goalId: goal.goalId,
-      title: goal.title,
-      description: goal.description,
-      stickerCount: goal.stickerCount,
-      mode: goal.mode,
-      visibility: goal.visibility,
-      status: goal.status,
-      createdBy: goal.createdBy,
-      creatorNickname,
-      autoApprove: goal.autoApprove,
-      createdAt: goal.createdAt,
-      updatedAt: goal.updatedAt,
-      participants: participantsWithNicknames,
-    };
   }
 
   async leaveGoal(
@@ -709,10 +619,12 @@ export class GoalsService {
 
     // creator의 nickname 조회
     let creatorNickname: string | undefined = undefined;
+    let creatorProfileImage: string | undefined = undefined;
     if (goal.createdBy) {
       try {
         const creator = await this.usersService.findByUserId(goal.createdBy);
         creatorNickname = creator?.nickname;
+        creatorProfileImage = creator?.profileImage;
       } catch (error) {
         console.error('Error fetching creator nickname:', error);
       }
@@ -723,9 +635,11 @@ export class GoalsService {
     if (goal.participants) {
       for (const participant of goal.participants) {
         let nickname: string | undefined = undefined;
+        let profileImage: string | undefined = undefined;
         try {
           const user = await this.usersService.findByUserId(participant.userId);
           nickname = user?.nickname;
+          profileImage = user?.profileImage;
         } catch (error) {
           console.error(
             `Error fetching nickname for user ${participant.userId}:`,
@@ -736,6 +650,7 @@ export class GoalsService {
         participantsWithNicknames.push({
           userId: participant.userId,
           nickname,
+          profileImage,
           status: participant.status,
           currentStickerCount: participant.currentStickerCount,
           joinedAt: participant.joinedAt,
@@ -755,6 +670,7 @@ export class GoalsService {
       status: goal.status,
       createdBy: goal.createdBy,
       creatorNickname,
+      creatorProfileImage,
       autoApprove: goal.autoApprove,
       createdAt: goal.createdAt,
       updatedAt: goal.updatedAt,
