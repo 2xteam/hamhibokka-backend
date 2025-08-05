@@ -34,6 +34,9 @@ export class Goal {
   creatorNickname?: string;
 
   @Field({ nullable: true })
+  creatorProfileImage?: string;
+
+  @Field({ nullable: true })
   autoApprove?: boolean;
 
   @Field({ nullable: true })

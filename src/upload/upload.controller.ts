@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  Body,
   Controller,
   Get,
   NotFoundException,
@@ -12,15 +11,12 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CreateStickerImageInput } from '../sticker-images/dto/create-sticker-image.input';
-import { StickerImagesService } from '../sticker-images/sticker-images.service';
 import { UsersService } from '../users/users.service';
 import { AzureUploadService } from './azure-upload.service';
 
 @Controller('upload')
 export class UploadController {
   constructor(
-    private readonly stickerImagesService: StickerImagesService,
     private readonly azureUploadService: AzureUploadService,
     private readonly usersService: UsersService,
   ) {}
@@ -45,21 +41,6 @@ export class UploadController {
       }
       throw new BadRequestException('프로필 이미지 조회에 실패했습니다.');
     }
-  }
-
-  @Post('sticker-image')
-  @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('file'))
-  async uploadStickerImage(
-    @UploadedFile() file: Express.Multer.File,
-    @Body() createStickerImageInput: CreateStickerImageInput,
-    @CurrentUser() userId: string,
-  ) {
-    return this.stickerImagesService.uploadStickerImage(
-      file,
-      createStickerImageInput,
-      userId,
-    );
   }
 
   @Post('profile-image')

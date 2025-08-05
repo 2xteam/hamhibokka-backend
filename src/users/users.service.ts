@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { Model } from 'mongoose';
-import { FollowsService } from '../follows/follows.service';
 import { UserDocument, User as UserSchema } from '../schemas/user.schema';
 import { UserInput } from './dto/user.input';
 import { User } from './entities/user.entity';
@@ -12,7 +11,6 @@ export class UsersService {
   constructor(
     @InjectModel(UserSchema.name)
     private readonly userModel: Model<UserDocument>,
-    private readonly followsService: FollowsService,
   ) {}
 
   async create(input: UserInput): Promise<User> {
@@ -31,6 +29,7 @@ export class UsersService {
       email: saved.email,
       nickname: saved.nickname,
       profileImage: saved.profileImage,
+      password: saved.password,
     };
   }
 
@@ -42,6 +41,7 @@ export class UsersService {
       email: u.email,
       nickname: u.nickname,
       profileImage: u.profileImage,
+      password: u.password,
     }));
   }
 
@@ -54,6 +54,7 @@ export class UsersService {
       email: u.email,
       nickname: u.nickname,
       profileImage: u.profileImage,
+      password: u.password,
     };
   }
 
@@ -66,6 +67,7 @@ export class UsersService {
       email: u.email,
       nickname: u.nickname,
       profileImage: u.profileImage,
+      password: u.password,
     };
   }
 
@@ -85,6 +87,7 @@ export class UsersService {
       email: u.email,
       nickname: u.nickname,
       profileImage: u.profileImage,
+      password: u.password,
     }));
 
     // 본인 계정 제외
@@ -92,35 +95,7 @@ export class UsersService {
       (user) => user.userId !== currentUserId,
     );
 
-    // followStatus 추가
-    const usersWithFollowStatus = await Promise.all(
-      filteredUsers.map(async (user) => {
-        let followStatus: string | undefined = undefined;
-
-        if (currentUserId && user.userId !== currentUserId) {
-          try {
-            const followStatusData =
-              await this.followsService.checkFollowStatus(
-                currentUserId,
-                user.userId,
-              );
-            followStatus = followStatusData.followStatus;
-          } catch (error) {
-            console.error(
-              `Error fetching follow status for user ${user.userId}:`,
-              error,
-            );
-          }
-        }
-
-        return {
-          ...user,
-          followStatus,
-        };
-      }),
-    );
-
-    return usersWithFollowStatus;
+    return filteredUsers;
   }
 
   async update(id: string, input: UserInput): Promise<User | undefined> {
@@ -143,12 +118,30 @@ export class UsersService {
       email: u.email,
       nickname: u.nickname,
       profileImage: u.profileImage,
+      password: u.password,
     };
   }
 
-  async remove(id: string): Promise<boolean> {
-    const res = await this.userModel.deleteOne({ _id: id });
-    return res.deletedCount > 0;
+  async updateNickname(
+    userId: string,
+    nickname: string,
+  ): Promise<User | undefined> {
+    const user = await this.userModel.findOneAndUpdate(
+      { userId },
+      { nickname },
+      { new: true },
+    );
+
+    if (!user) return undefined;
+
+    return {
+      id: user._id ? String(user._id) : '',
+      userId: user.userId,
+      email: user.email,
+      nickname: user.nickname,
+      profileImage: user.profileImage,
+      password: user.password,
+    };
   }
 
   async updateProfileImage(
@@ -169,6 +162,12 @@ export class UsersService {
       email: user.email,
       nickname: user.nickname,
       profileImage: user.profileImage,
+      password: user.password,
     };
+  }
+
+  async remove(id: string): Promise<boolean> {
+    const res = await this.userModel.deleteOne({ _id: id });
+    return res.deletedCount > 0;
   }
 }

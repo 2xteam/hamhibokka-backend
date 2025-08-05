@@ -17,6 +17,9 @@ export class GoalParticipant {
   @Field({ nullable: true })
   nickname?: string;
 
+  @Field({ nullable: true })
+  profileImage?: string;
+
   @Field()
   status: string;
 

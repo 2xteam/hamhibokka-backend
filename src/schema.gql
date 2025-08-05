@@ -52,6 +52,7 @@ type StickerReceivedLog {
 type GoalParticipant {
   userId: String!
   nickname: String
+  profileImage: String
   status: String!
   currentStickerCount: Float!
   joinedAt: DateTime!
@@ -69,6 +70,7 @@ type Goal {
   status: String
   createdBy: String
   creatorNickname: String
+  creatorProfileImage: String
   autoApprove: Boolean
   createdAt: DateTime
   updatedAt: DateTime
@@ -93,25 +95,6 @@ type GoalInvitation {
   toUser: User
 }
 
-type StickerImage {
-  id: ID!
-  stickerImageId: String!
-  name: String!
-  imageUrl: String!
-  thumbnailUrl: String!
-  isDefault: Boolean!
-  category: String
-  uploadedBy: String
-  createdAt: DateTime!
-}
-
-type Sticker {
-  id: ID!
-  goalId: String!
-  recipientId: String!
-  stickerImageId: String!
-}
-
 type Query {
   hello: String!
   getUser(id: String!): User
@@ -128,10 +111,6 @@ type Query {
   getGoalsByUserId(userId: String!): [Goal!]!
   getGoal(id: String!): Goal
   searchGoalsByTitle(title: String!): [Goal!]!
-  getStickers: [Sticker!]!
-  getSticker(id: String!): Sticker
-  myStickerImages: [StickerImage!]!
-  defaultStickerImages: [StickerImage!]!
   getInvitations: [GoalInvitation!]!
   getInvitation(id: String!): GoalInvitation
 }
@@ -142,6 +121,7 @@ type Mutation {
   createUser(input: UserInput!): User!
   updateUser(id: String!, input: UserInput!): User!
   updateProfileImage(input: UpdateProfileImageInput!): User!
+  updateNickname(input: UpdateNicknameInput!): User!
   deleteUser(id: String!): Boolean!
   createFollow(input: FollowInput!): Follow!
   updateFollow(id: String!, input: FollowInput!): Follow!
@@ -150,12 +130,7 @@ type Mutation {
   createGoal(input: GoalInput!): Goal!
   updateGoal(id: String!, input: GoalInput!): Goal!
   deleteGoal(id: String!): Boolean!
-  receiveSticker(input: ReceiveStickerInput!): Goal!
   leaveGoal(input: LeaveGoalInput!): Goal!
-  createSticker(input: StickerInput!): Sticker!
-  updateSticker(id: String!, input: StickerInput!): Sticker!
-  deleteSticker(id: String!): Boolean!
-  deleteStickerImage(stickerImageId: String!): Boolean!
   createGoalInvitation(input: CreateGoalInvitationInput!): GoalInvitation!
   createGoalJoinRequest(input: CreateGoalJoinRequestInput!): GoalInvitation!
   updateGoalInvitation(id: String!, input: UpdateGoalInvitationInput!): GoalInvitation!
@@ -185,6 +160,10 @@ input UpdateProfileImageInput {
   profileImage: String!
 }
 
+input UpdateNicknameInput {
+  nickname: String!
+}
+
 input FollowInput {
   followerId: String!
   followingId: String!
@@ -200,22 +179,9 @@ input GoalInput {
   autoApprove: Boolean
 }
 
-input ReceiveStickerInput {
-  goalId: String!
-  toUserId: String!
-  recipientId: String
-  stickerCount: Float
-}
-
 input LeaveGoalInput {
   goalId: String!
   participantId: String!
-}
-
-input StickerInput {
-  goalId: String!
-  recipientId: String!
-  stickerImageId: String!
 }
 
 input CreateGoalInvitationInput {

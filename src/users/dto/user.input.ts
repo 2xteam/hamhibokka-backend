@@ -23,3 +23,9 @@ export class UpdateProfileImageInput {
   @Field()
   profileImage: string;
 }
+
+@InputType()
+export class UpdateNicknameInput {
+  @Field()
+  nickname: string;
+}
