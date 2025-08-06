@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { Model } from 'mongoose';
+import { FollowsService } from '../follows/follows.service';
 import { UserDocument, User as UserSchema } from '../schemas/user.schema';
 import { UserInput } from './dto/user.input';
 import { User } from './entities/user.entity';
@@ -11,6 +12,7 @@ export class UsersService {
   constructor(
     @InjectModel(UserSchema.name)
     private readonly userModel: Model<UserDocument>,
+    private readonly followsService: FollowsService,
   ) {}
 
   async create(input: UserInput): Promise<User> {
@@ -95,7 +97,33 @@ export class UsersService {
       (user) => user.userId !== currentUserId,
     );
 
-    return filteredUsers;
+    // followStatus 계산
+    const usersWithFollowStatus = await Promise.all(
+      filteredUsers.map(async (user) => {
+        let followStatus: string | undefined = undefined;
+        if (currentUserId) {
+          try {
+            console.log(
+              `Checking follow status: ${currentUserId} -> ${user.userId}`,
+            );
+            const followStatusResult =
+              await this.followsService.checkFollowStatus(
+                currentUserId,
+                user.userId,
+              );
+            followStatus = followStatusResult.followStatus;
+          } catch (error) {
+            console.error('Error checking follow status:', error);
+          }
+        }
+        return {
+          ...user,
+          followStatus,
+        };
+      }),
+    );
+
+    return usersWithFollowStatus;
   }
 
   async update(id: string, input: UserInput): Promise<User | undefined> {
