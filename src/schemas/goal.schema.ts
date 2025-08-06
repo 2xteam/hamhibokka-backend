@@ -65,6 +65,9 @@ export class Goal {
   @Prop()
   description?: string;
 
+  @Prop()
+  goalImage?: string;
+
   @Prop({ required: true })
   stickerCount: number;
 

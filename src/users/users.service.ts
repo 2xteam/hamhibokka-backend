@@ -103,9 +103,6 @@ export class UsersService {
         let followStatus: string | undefined = undefined;
         if (currentUserId) {
           try {
-            console.log(
-              `Checking follow status: ${currentUserId} -> ${user.userId}`,
-            );
             const followStatusResult =
               await this.followsService.checkFollowStatus(
                 currentUserId,
@@ -114,11 +111,12 @@ export class UsersService {
             followStatus = followStatusResult.followStatus;
           } catch (error) {
             console.error('Error checking follow status:', error);
+            followStatus = undefined;
           }
         }
         return {
           ...user,
-          followStatus,
+          followStatus: followStatus || null,
         };
       }),
     );

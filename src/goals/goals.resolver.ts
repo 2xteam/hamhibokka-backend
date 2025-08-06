@@ -4,6 +4,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GoalInput } from './dto/goal.input';
 import { LeaveGoalInput } from './dto/leave-goal.input';
+import { ReceiveStickerInput } from './dto/receive-sticker.input';
 import { Goal } from './entities/goal.entity';
 import { GoalsService } from './goals.service';
 
@@ -21,6 +22,12 @@ export class GoalsResolver {
   @UseGuards(JwtAuthGuard)
   async getMyParticipatedGoals(@CurrentUser() userId: string) {
     return this.goalsService.findMyParticipatedGoals(userId);
+  }
+
+  @Query(() => [Goal], { name: 'getAllGoalsByUserId' })
+  @UseGuards(JwtAuthGuard)
+  async getAllGoalsByUserId(@Args('userId') targetUserId: string) {
+    return this.goalsService.findAllGoalsByUserId(targetUserId);
   }
 
   @Query(() => [Goal], { name: 'getFollowedUsersGoals' })
@@ -84,6 +91,20 @@ export class GoalsResolver {
     return this.goalsService.leaveGoal(
       input.goalId,
       input.participantId,
+      userId,
+    );
+  }
+
+  @Mutation(() => Goal, { name: 'receiveSticker' })
+  @UseGuards(JwtAuthGuard)
+  async receiveSticker(
+    @Args('input') input: ReceiveStickerInput,
+    @CurrentUser() userId: string,
+  ) {
+    return this.goalsService.receiveSticker(
+      input.goalId,
+      input.toUserId,
+      input.stickerCount,
       userId,
     );
   }
