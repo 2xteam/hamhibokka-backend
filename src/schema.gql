@@ -64,6 +64,7 @@ type Goal {
   goalId: String!
   title: String!
   description: String
+  goalImage: String
   stickerCount: Float!
   mode: String
   visibility: String
@@ -107,6 +108,7 @@ type Query {
   getFollowRequests: [Follow!]!
   getGoals: [Goal!]!
   getMyParticipatedGoals: [Goal!]!
+  getAllGoalsByUserId(userId: String!): [Goal!]!
   getFollowedUsersGoals: [Goal!]!
   getGoalsByUserId(userId: String!): [Goal!]!
   getGoal(id: String!): Goal
@@ -131,6 +133,7 @@ type Mutation {
   updateGoal(id: String!, input: GoalInput!): Goal!
   deleteGoal(id: String!): Boolean!
   leaveGoal(input: LeaveGoalInput!): Goal!
+  receiveSticker(input: ReceiveStickerInput!): Goal!
   createGoalInvitation(input: CreateGoalInvitationInput!): GoalInvitation!
   createGoalJoinRequest(input: CreateGoalJoinRequestInput!): GoalInvitation!
   updateGoalInvitation(id: String!, input: UpdateGoalInvitationInput!): GoalInvitation!
@@ -172,6 +175,7 @@ input FollowInput {
 input GoalInput {
   title: String!
   description: String
+  goalImage: String
   stickerCount: Float!
   mode: String
   visibility: String
@@ -182,6 +186,12 @@ input GoalInput {
 input LeaveGoalInput {
   goalId: String!
   participantId: String!
+}
+
+input ReceiveStickerInput {
+  goalId: String!
+  toUserId: String!
+  stickerCount: Float!
 }
 
 input CreateGoalInvitationInput {

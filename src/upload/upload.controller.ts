@@ -11,6 +11,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { GoalsService } from '../goals/goals.service';
 import { UsersService } from '../users/users.service';
 import { AzureUploadService } from './azure-upload.service';
 
@@ -19,6 +20,7 @@ export class UploadController {
   constructor(
     private readonly azureUploadService: AzureUploadService,
     private readonly usersService: UsersService,
+    private readonly goalsService: GoalsService,
   ) {}
 
   @Get('my-profile-image')
@@ -84,6 +86,36 @@ export class UploadController {
         throw error;
       }
       throw new BadRequestException('프로필 이미지 업로드에 실패했습니다.');
+    }
+  }
+
+  @Post('goal-image')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadGoalImage(
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() userId: string,
+  ) {
+    if (!file) {
+      throw new BadRequestException('파일이 필요합니다.');
+    }
+
+    try {
+      // Azure에 이미지 업로드
+      const uploadResult = await this.azureUploadService.uploadGoalImage(
+        file,
+        userId,
+      );
+
+      return {
+        message: '목표 이미지가 성공적으로 업로드되었습니다.',
+        goalImage: uploadResult.originalUrl,
+      };
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException('목표 이미지 업로드에 실패했습니다.');
     }
   }
 }

@@ -17,8 +17,8 @@ export class User {
   @Field({ nullable: true })
   profileImage?: string;
 
-  @Field({ nullable: true })
-  followStatus?: string;
+  @Field(() => String, { nullable: true })
+  followStatus?: string | null;
 
   // GraphQL에는 노출하지 않음
   password?: string;

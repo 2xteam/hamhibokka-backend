@@ -4,10 +4,10 @@ import { Model } from 'mongoose';
 import {
   FollowDocument,
   Follow as FollowSchema,
+  FollowStatus,
 } from '../schemas/follow.schema';
 import { UsersService } from '../users/users.service';
 import { FollowInput } from './dto/follow.input';
-import { FollowStatus } from './entities/follow-status.entity';
 import { Follow } from './entities/follow.entity';
 
 @Injectable()
@@ -282,16 +282,53 @@ export class FollowsService {
   async checkFollowStatus(
     followerId: string,
     followingId: string,
-  ): Promise<FollowStatus> {
-    const follow = await this.followModel.findOne({
+  ): Promise<{ followStatus?: string; followId?: string }> {
+    // 양방향 팔로우 관계 확인
+    const forwardFollow = await this.followModel.findOne({
       followerId,
       followingId,
     });
 
-    return {
-      followStatus: follow?.status || undefined,
-      followId: follow?._id ? String(follow._id) : undefined,
-    };
+    const reverseFollow = await this.followModel.findOne({
+      followerId: followingId,
+      followingId: followerId,
+    });
+
+    // 맞팔로우 상태 확인
+    if (forwardFollow && reverseFollow) {
+      // 양방향 모두 존재하고 approved이면 맞팔로우
+      if (
+        forwardFollow.status === FollowStatus.APPROVED &&
+        reverseFollow.status === FollowStatus.APPROVED
+      ) {
+        return {
+          followStatus: FollowStatus.MUTUAL,
+          followId: forwardFollow._id ? String(forwardFollow._id) : undefined,
+        };
+      }
+    }
+
+    // 단방향 팔로우 상태 반환 (또는 관계 없음)
+    // forwardFollow가 있으면 그 상태를, 없으면 reverseFollow의 상태를 반환
+    let result;
+    if (forwardFollow) {
+      result = {
+        followStatus: forwardFollow.status,
+        followId: forwardFollow._id ? String(forwardFollow._id) : undefined,
+      };
+    } else if (reverseFollow) {
+      result = {
+        followStatus: reverseFollow.status,
+        followId: reverseFollow._id ? String(reverseFollow._id) : undefined,
+      };
+    } else {
+      result = {
+        followStatus: undefined,
+        followId: undefined,
+      };
+    }
+
+    return result;
   }
 
   async findUserFollows(userId: string, status?: string): Promise<Follow[]> {

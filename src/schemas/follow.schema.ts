@@ -7,6 +7,7 @@ export enum FollowStatus {
   PENDING = 'pending',
   APPROVED = 'approved',
   BLOCKED = 'blocked',
+  MUTUAL = 'mutual',
 }
 
 @Schema({ timestamps: true })

@@ -51,6 +51,7 @@ export class GoalsService {
     const goalData: any = {
       title: input.title,
       description: input.description,
+      goalImage: input.goalImage, // 추가됨
       stickerCount: input.stickerCount,
       mode: input.mode ? input.mode.toLowerCase() : 'personal',
       visibility,
@@ -61,6 +62,7 @@ export class GoalsService {
       goalId: `goal_${Math.random().toString(36).substr(2, 9)}`,
       participants,
     };
+
     const goal = new this.goalModel(goalData);
     const saved = await goal.save();
 
@@ -98,6 +100,7 @@ export class GoalsService {
       goalId: saved.goalId,
       title: saved.title,
       description: saved.description,
+      goalImage: saved.goalImage, // 추가됨
       stickerCount: saved.stickerCount,
       mode: saved.mode,
       visibility: saved.visibility,
@@ -153,6 +156,7 @@ export class GoalsService {
           goalId: g.goalId,
           title: g.title,
           description: g.description,
+          goalImage: g.goalImage,
           stickerCount: g.stickerCount,
           mode: g.mode,
           visibility: g.visibility,
@@ -213,6 +217,7 @@ export class GoalsService {
           goalId: g.goalId,
           title: g.title,
           description: g.description,
+          goalImage: g.goalImage,
           stickerCount: g.stickerCount,
           mode: g.mode,
           visibility: g.visibility,
@@ -229,12 +234,88 @@ export class GoalsService {
     return goalsWithNicknames;
   }
 
+  async findAllGoalsByUserId(userId: string): Promise<Goal[]> {
+    // 현재 사용자가 생성한 목표와 참여한 목표 모두 조회
+    const goals = await this.goalModel
+      .find({
+        $or: [
+          { createdBy: userId }, // 내가 생성한 목표
+          { 'participants.userId': userId }, // 내가 참여한 목표
+        ],
+      })
+      .sort({ createdAt: -1 });
+
+    // 각 goal의 participants에 nickname 조회
+    const goalsWithNicknames = await Promise.all(
+      goals.map(async (g) => {
+        // creator의 nickname 조회
+        let creatorNickname: string | undefined = undefined;
+        let creatorProfileImage: string | undefined = undefined;
+        if (g.createdBy) {
+          try {
+            const creator = await this.usersService.findByUserId(g.createdBy);
+            creatorNickname = creator?.nickname;
+            creatorProfileImage = creator?.profileImage;
+          } catch (error) {
+            console.error('Error fetching creator nickname:', error);
+          }
+        }
+
+        const participantsWithNicknames = await Promise.all(
+          (g.participants || []).map(async (p) => {
+            let nickname: string | undefined = undefined;
+            let profileImage: string | undefined = undefined;
+            try {
+              const user = await this.usersService.findByUserId(p.userId);
+              nickname = user?.nickname;
+              profileImage = user?.profileImage;
+            } catch (error) {
+              console.error(
+                `Error fetching nickname for user ${p.userId}:`,
+                error,
+              );
+            }
+
+            return {
+              userId: p.userId,
+              nickname,
+              profileImage,
+              status: p.status,
+              currentStickerCount: p.currentStickerCount,
+              joinedAt: p.joinedAt,
+              stickerReceivedLogs: p.stickerReceivedLogs || [],
+            };
+          }),
+        );
+
+        return {
+          id: g._id ? String(g._id) : '',
+          goalId: g.goalId,
+          title: g.title,
+          description: g.description,
+          stickerCount: g.stickerCount,
+          mode: g.mode,
+          visibility: g.visibility,
+          status: g.status,
+          createdBy: g.createdBy,
+          creatorNickname,
+          creatorProfileImage,
+          autoApprove: g.autoApprove,
+          createdAt: g.createdAt,
+          updatedAt: g.updatedAt,
+          participants: participantsWithNicknames,
+        };
+      }),
+    );
+
+    return goalsWithNicknames;
+  }
+
   async findFollowedUsersGoals(userId: string): Promise<Goal[]> {
     // 현재 사용자가 팔로우하는 사용자들의 ID 목록 조회
     const followedUsers = await this.followsService.getFollowedUserIds(userId);
 
     if (followedUsers.length === 0) {
-      console.log('No followed users found');
       return [];
     }
 
@@ -310,6 +391,7 @@ export class GoalsService {
           goalId: g.goalId,
           title: g.title,
           description: g.description,
+          goalImage: g.goalImage,
           stickerCount: g.stickerCount,
           mode: g.mode,
           visibility: g.visibility,
@@ -402,6 +484,7 @@ export class GoalsService {
           goalId: g.goalId,
           title: g.title,
           description: g.description,
+          goalImage: g.goalImage,
           stickerCount: g.stickerCount,
           mode: g.mode,
           visibility: g.visibility,
@@ -475,6 +558,7 @@ export class GoalsService {
       goalId: g.goalId,
       title: g.title,
       description: g.description,
+      goalImage: g.goalImage,
       stickerCount: g.stickerCount,
       mode: g.mode,
       visibility: g.visibility,
@@ -516,6 +600,7 @@ export class GoalsService {
     const updateData: Record<string, any> = {
       title: input.title,
       description: input.description,
+      goalImage: input.goalImage, // 추가됨
       stickerCount: input.stickerCount,
       mode: input.mode ? input.mode.toLowerCase() : undefined,
       visibility,
@@ -569,6 +654,7 @@ export class GoalsService {
       goalId: g.goalId,
       title: g.title,
       description: g.description,
+      goalImage: g.goalImage,
       stickerCount: g.stickerCount,
       mode: g.mode,
       visibility: g.visibility,
@@ -589,6 +675,117 @@ export class GoalsService {
     if (!g) return false;
     const res = await this.goalModel.deleteOne({ _id: id });
     return res.deletedCount > 0;
+  }
+
+  async receiveSticker(
+    goalId: string,
+    toUserId: string,
+    stickerCount: number,
+    userId: string,
+  ): Promise<Goal> {
+    // 목표 찾기
+    const goal = await this.goalModel.findOne({ goalId });
+    if (!goal) {
+      throw new Error('목표를 찾을 수 없습니다.');
+    }
+
+    // 참여자 목록에서 해당 사용자 찾기
+    const participant = goal.participants?.find((p) => p.userId === toUserId);
+
+    if (!participant) {
+      throw new Error('해당 사용자가 이 목표에 참여하고 있지 않습니다.');
+    }
+
+    // 스티커 카운트 증가
+    participant.currentStickerCount += stickerCount;
+
+    // 스티커 받은 로그 추가
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // 시간을 00:00:00으로 설정
+
+    // 오늘 날짜의 로그가 있는지 확인
+    const existingLogIndex = participant.stickerReceivedLogs?.findIndex(
+      (log) => {
+        const logDate = new Date(log.date);
+        logDate.setHours(0, 0, 0, 0);
+        return logDate.getTime() === today.getTime();
+      },
+    );
+
+    if (existingLogIndex !== undefined && existingLogIndex !== -1) {
+      // 기존 로그가 있으면 카운트 증가
+      participant.stickerReceivedLogs[existingLogIndex].count += 1;
+    } else {
+      // 새로운 로그 추가
+      if (!participant.stickerReceivedLogs) {
+        participant.stickerReceivedLogs = [];
+      }
+      participant.stickerReceivedLogs.push({
+        date: today,
+        count: 1,
+      });
+    }
+
+    goal.markModified('participants');
+    goal.updatedBy = userId;
+    await goal.save();
+
+    // creator의 nickname 조회
+    let creatorNickname: string | undefined = undefined;
+    let creatorProfileImage: string | undefined = undefined;
+    if (goal.createdBy) {
+      try {
+        const creator = await this.usersService.findByUserId(goal.createdBy);
+        creatorNickname = creator?.nickname;
+        creatorProfileImage = creator?.profileImage;
+      } catch (error) {
+        console.error('Error fetching creator nickname:', error);
+      }
+    }
+
+    // participants의 nickname 조회
+    const participantsWithNicknames: any[] = [];
+    if (goal.participants) {
+      for (const p of goal.participants) {
+        let nickname: string | undefined = undefined;
+        let profileImage: string | undefined = undefined;
+        try {
+          const user = await this.usersService.findByUserId(p.userId);
+          nickname = user?.nickname;
+          profileImage = user?.profileImage;
+        } catch (error) {
+          console.error(`Error fetching nickname for user ${p.userId}:`, error);
+        }
+
+        participantsWithNicknames.push({
+          userId: p.userId,
+          nickname,
+          profileImage,
+          status: p.status,
+          currentStickerCount: p.currentStickerCount,
+          joinedAt: p.joinedAt,
+          stickerReceivedLogs: p.stickerReceivedLogs || [],
+        });
+      }
+    }
+
+    return {
+      id: goal._id ? goal._id.toString() : '',
+      goalId: goal.goalId,
+      title: goal.title,
+      description: goal.description,
+      stickerCount: goal.stickerCount,
+      mode: goal.mode,
+      visibility: goal.visibility,
+      status: goal.status,
+      createdBy: goal.createdBy,
+      creatorNickname,
+      creatorProfileImage,
+      autoApprove: goal.autoApprove,
+      createdAt: goal.createdAt,
+      updatedAt: goal.updatedAt,
+      participants: participantsWithNicknames,
+    };
   }
 
   async leaveGoal(

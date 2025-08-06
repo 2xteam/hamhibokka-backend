@@ -130,4 +130,49 @@ export class AzureUploadService {
       throw new BadRequestException(`이미지 업로드 실패: ${error.message}`);
     }
   }
+
+  async uploadGoalImage(file: Express.Multer.File, userId: string) {
+    if (!file) {
+      throw new BadRequestException('파일이 필요합니다.');
+    }
+
+    if (!file.mimetype.startsWith('image/')) {
+      throw new BadRequestException('이미지 파일만 업로드 가능합니다.');
+    }
+
+    try {
+      // 고유한 파일명 생성
+      const goalImageId = uuidv4();
+      const originalKey = `goals/${goalImageId}/original.${this.getFileExtension(file.originalname)}`;
+
+      // Azure Storage가 설정되어 있으면 실제 업로드
+      if (this.containerClient) {
+        // Azure Blob Storage에 업로드 (원본 파일 그대로)
+        await this.uploadToBlob(originalKey, file.buffer, file.mimetype);
+
+        // 공개 URL 생성
+        const imageUrl = this.getPublicUrl(originalKey);
+
+        return {
+          originalUrl: imageUrl,
+          thumbnailUrl: imageUrl, // 임시로 원본과 동일하게 설정
+          goalImageId,
+          fileSize: file.size,
+          contentType: file.mimetype,
+        };
+      } else {
+        // Azure Storage 설정이 없으면 더미 URL 반환
+        const imageUrl = `http://localhost:3000/dummy/${originalKey}`;
+        return {
+          originalUrl: imageUrl,
+          thumbnailUrl: imageUrl,
+          goalImageId,
+          fileSize: file.size,
+          contentType: file.mimetype,
+        };
+      }
+    } catch (error) {
+      throw new BadRequestException(`이미지 업로드 실패: ${error.message}`);
+    }
+  }
 }
