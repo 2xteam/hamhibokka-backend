@@ -32,7 +32,7 @@ export class StickerReceivedLog {
   @Prop({ required: true, type: Date })
   date: Date; // Date 타입으로 변경
 
-  @Prop({ required: true, default: 1 })
+  @Prop({ required: true })
   count: number;
 }
 
