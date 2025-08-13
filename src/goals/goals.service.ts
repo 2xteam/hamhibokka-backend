@@ -701,30 +701,17 @@ export class GoalsService {
 
     // 스티커 받은 로그 추가
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // 시간을 00:00:00으로 설정
 
-    // 오늘 날짜의 로그가 있는지 확인
-    const existingLogIndex = participant.stickerReceivedLogs?.findIndex(
-      (log) => {
-        const logDate = new Date(log.date);
-        logDate.setHours(0, 0, 0, 0);
-        return logDate.getTime() === today.getTime();
-      },
-    );
-
-    if (existingLogIndex !== undefined && existingLogIndex !== -1) {
-      // 기존 로그가 있으면 카운트 증가
-      participant.stickerReceivedLogs[existingLogIndex].count += 1;
-    } else {
-      // 새로운 로그 추가
-      if (!participant.stickerReceivedLogs) {
-        participant.stickerReceivedLogs = [];
-      }
-      participant.stickerReceivedLogs.push({
-        date: today,
-        count: 1,
-      });
+    // 로그 배열 초기화
+    if (!participant.stickerReceivedLogs) {
+      participant.stickerReceivedLogs = [];
     }
+
+    // 호출할 때마다 새로운 로그 추가
+    participant.stickerReceivedLogs.push({
+      date: today,
+      count: stickerCount,
+    });
 
     goal.markModified('participants');
     goal.updatedBy = userId;
