@@ -1,7 +1,9 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -27,6 +29,7 @@ export class GoalInvitationsService {
     private readonly invitationModel: Model<GoalInvitationDocument>,
     @InjectModel(Goal.name)
     private readonly goalModel: Model<GoalDocument>,
+    @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
   ) {}
 
@@ -530,5 +533,12 @@ export class GoalInvitationsService {
       ...baseEntity,
       goal: goalEntity,
     };
+  }
+
+  async removeAllUserInvitations(userId: string): Promise<void> {
+    // 사용자와 관련된 모든 초대 삭제 (보낸 초대, 받은 초대 모두)
+    await this.invitationModel.deleteMany({
+      $or: [{ fromUserId: userId }, { toUserId: userId }],
+    });
   }
 }

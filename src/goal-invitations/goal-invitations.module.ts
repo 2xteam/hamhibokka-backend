@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import {
   GoalInvitation,
@@ -15,7 +15,7 @@ import { GoalInvitationsService } from './goal-invitations.service';
       { name: GoalInvitation.name, schema: GoalInvitationSchema },
       { name: Goal.name, schema: GoalSchema },
     ]),
-    UsersModule,
+    forwardRef(() => UsersModule),
   ],
   providers: [GoalInvitationsResolver, GoalInvitationsService],
   exports: [GoalInvitationsService],
