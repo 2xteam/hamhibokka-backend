@@ -483,4 +483,11 @@ export class FollowsService {
       updatedAt: (updatedFollow as any).updatedAt,
     };
   }
+
+  async removeAllUserFollows(userId: string): Promise<void> {
+    // 사용자와 관련된 모든 팔로우 관계 삭제 (팔로워, 팔로잉 모두)
+    await this.followModel.deleteMany({
+      $or: [{ followerId: userId }, { followingId: userId }],
+    });
+  }
 }

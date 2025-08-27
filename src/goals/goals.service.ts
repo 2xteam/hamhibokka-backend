@@ -861,4 +861,17 @@ export class GoalsService {
       participants: participantsWithNicknames,
     };
   }
+
+  async removeAllUserGoals(userId: string): Promise<void> {
+    // 사용자가 생성한 모든 목표 삭제
+    await this.goalModel.deleteMany({ createdBy: userId });
+  }
+
+  async removeUserFromAllGoals(userId: string): Promise<void> {
+    // 사용자가 참여하고 있는 모든 목표에서 참여자 정보만 제거
+    await this.goalModel.updateMany(
+      { 'participants.userId': userId },
+      { $pull: { participants: { userId: userId } } },
+    );
+  }
 }

@@ -69,7 +69,16 @@ export class UsersResolver {
   }
 
   @Mutation(() => Boolean, { name: 'deleteUser' })
-  deleteUser(@Args('id') id: string) {
+  @UseGuards(JwtAuthGuard)
+  async deleteUser(
+    @Args('id') id: string,
+    @CurrentUser() currentUserId: string,
+  ) {
+    // 본인 계정만 삭제 가능
+    const user = await this.usersService.findOne(id);
+    if (!user || user.userId !== currentUserId) {
+      throw new Error('자신의 계정만 삭제할 수 있습니다.');
+    }
     return this.usersService.remove(id);
   }
 }
